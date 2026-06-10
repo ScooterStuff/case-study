@@ -40,3 +40,26 @@ def test_health_and_cors() -> None:
         health = client.get("/health", headers={"Origin": "http://localhost:3000"})
         assert health.json()["parts_count"] > 0
         assert health.headers.get("access-control-allow-origin") == "http://localhost:3000"
+
+
+def test_request_id_header_present() -> None:
+    with _client() as client:
+        r = client.get("/health")
+        assert len(r.headers.get("x-request-id", "")) == 12
+
+
+def test_json_log_format(capfd) -> None:
+    import json as _json
+    import logging
+
+    from backend.app import config
+
+    old = config.settings.log_format
+    config.settings.log_format = "json"
+    config.setup_logging()
+    logging.getLogger("backend.test").info("hello ops")
+    err = capfd.readouterr().err.strip().splitlines()[-1]
+    parsed = _json.loads(err)
+    assert parsed["message"] == "hello ops" and "request_id" in parsed
+    config.settings.log_format = old
+    config.setup_logging()

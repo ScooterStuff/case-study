@@ -116,6 +116,8 @@ class CrashingToolCaller:
 
 def test_tool_error_surfaced_not_crashing(monkeypatch) -> None:
     events = _events(monkeypatch, CrashingToolCaller())
+    kinds = [e["event"] for e in events]
+    assert "tool_error" in kinds  # failures emit tool_error, never a 500
     assert events[-1]["event"] == "done"
     text = "".join(e["data"]["delta"] for e in events if e["event"] == "token")
     assert "snag" in text
@@ -128,3 +130,22 @@ def test_history_compaction_truncates_long_fields() -> None:
     compacted = json.loads(_compact(blob))  # stays valid JSON
     assert len(compacted["data"]["big"]) <= 400
     assert len(compacted["data"]["list"]) <= 6
+
+
+class ExplodingLLM:
+    async def chat(self, messages, tools):
+        raise RuntimeError("provider 401: bad api key")
+        yield  # pragma: no cover - makes this an async generator
+
+    def classify(self, prompt):
+        return "in_scope"
+
+
+def test_llm_failure_mid_session_is_graceful(monkeypatch) -> None:
+    """Kill the LLM key mid-session: friendly error event, no stack trace."""
+    events = _events(monkeypatch, ExplodingLLM())
+    kinds = [e["event"] for e in events]
+    assert "error" in kinds and kinds[-1] == "done"
+    msg = next(e["data"]["message"] for e in events if e["event"] == "error")
+    assert "401" not in msg and "Traceback" not in msg
+    assert "try again" in msg

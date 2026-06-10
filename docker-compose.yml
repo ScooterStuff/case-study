@@ -1,4 +1,5 @@
-# Phase 2 minimal bring-up: just the database. Phase 8 adds backend/frontend.
+# One-command bring-up: docker compose up --build
+# Keyless demo mode:    MOCK_LLM=1 MOCK_EMBEDDINGS=1 docker compose up --build
 services:
   db:
     image: pgvector/pgvector:pg16
@@ -6,11 +7,30 @@ services:
       POSTGRES_USER: ps
       POSTGRES_PASSWORD: ps
       POSTGRES_DB: partselect
-    ports: ["5432:5432"]
     volumes: [pgdata:/var/lib/postgresql/data]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ps -d partselect"]
       interval: 5s
       retries: 10
+
+  backend:
+    build: ./backend
+    env_file:
+      - path: .env
+        required: false        # MOCK_LLM=1 demo works with no .env at all
+    environment:
+      DATABASE_URL: postgresql://ps:ps@db:5432/partselect
+      MOCK_LLM: ${MOCK_LLM:-0}
+      MOCK_EMBEDDINGS: ${MOCK_EMBEDDINGS:-0}
+    depends_on:
+      db: { condition: service_healthy }
+    ports: ["8000:8000"]
+
+  frontend:
+    build: ./frontend
+    ports: ["3000:3000"]
+    depends_on:
+      backend: { condition: service_healthy }
+
 volumes:
   pgdata: {}

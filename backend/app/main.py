@@ -3,16 +3,36 @@
 from __future__ import annotations
 
 import json
+import logging
+import uuid
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
 from backend.app import config, retrieval
 from backend.app.agent import chat_stream
 
+logger = logging.getLogger(__name__)
+
 app = FastAPI(title="PartSelect Chat Agent")
+
+
+@app.middleware("http")
+async def request_id_middleware(request: Request, call_next):
+    rid = uuid.uuid4().hex[:12]
+    config.request_id_var.set(rid)
+    try:
+        response = await call_next(request)
+    except Exception:  # noqa: BLE001 - single safety net; details stay in logs
+        logger.exception("unhandled error")
+        return JSONResponse({"error": "internal error", "request_id": rid}, status_code=500)
+    response.headers["X-Request-ID"] = rid
+    return response
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],

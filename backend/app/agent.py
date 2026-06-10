@@ -88,19 +88,35 @@ async def chat_stream(session_id: str, user_message: str) -> AsyncIterator[dict]
         -MAX_HISTORY_MESSAGES:
     ]
     final_text = ""
+    tools_used: list[str] = []
 
     for _round in range(MAX_TOOL_ROUNDS + 1):
         buffered: list[str] = []  # final prose is buffered for validation
         tool_calls: list[dict] = []
-        async for kind, payload in client.chat(messages, openai_tool_schemas()):
-            if kind == "token":
-                buffered.append(payload)
-            elif kind == "tool_calls":
-                tool_calls = payload
+        try:
+            async for kind, payload in client.chat(messages, openai_tool_schemas()):
+                if kind == "token":
+                    buffered.append(payload)
+                elif kind == "tool_calls":
+                    tool_calls = payload
+        except Exception:  # noqa: BLE001 - LLM/provider failure: no stack trace to the user
+            logger.exception("LLM call failed")
+            yield {
+                "event": "error",
+                "data": {
+                    "message": "I hit a temporary problem reaching the language model - please try again."
+                },
+            }
+            yield {
+                "event": "done",
+                "data": {"latency_ms": int((time.monotonic() - t0) * 1000), "error": True},
+            }
+            return
 
         if not tool_calls:
             final_text = "".join(buffered)
             break
+        tools_used += [c["name"] for c in tool_calls]
 
         if buffered:  # text alongside tool calls: keep in history
             messages.append({"role": "assistant", "content": "".join(buffered)})
@@ -137,7 +153,11 @@ async def chat_stream(session_id: str, user_message: str) -> AsyncIterator[dict]
 
         for call, result in zip(tool_calls, results, strict=True):
             state["allowed_ps"] |= set(PS_RE.findall(json.dumps(result["data"], default=str)))
-            yield {"event": "tool_end", "data": {"name": call["name"]}}
+            if isinstance(result.get("data"), dict) and result["data"].get("error"):
+                # tool failures never 500 the stream - the agent recovers conversationally
+                yield {"event": "tool_error", "data": {"name": call["name"]}}
+            else:
+                yield {"event": "tool_end", "data": {"name": call["name"]}}
             if result.get("ui_block"):
                 yield {"event": "ui_block", "data": result["ui_block"]}
             messages.append(
@@ -174,7 +194,16 @@ async def chat_stream(session_id: str, user_message: str) -> AsyncIterator[dict]
     state["messages"].append({"role": "assistant", "content": final_text})
     for chunk in re.findall(r".{1,40}", final_text, re.S):
         yield {"event": "token", "data": {"delta": chunk}}
-    yield {"event": "done", "data": {"latency_ms": int((time.monotonic() - t0) * 1000)}}
+    latency_ms = int((time.monotonic() - t0) * 1000)
+    # per-turn ops log: this line is the observability story (ship to OTel in prod)
+    logger.info(
+        "turn session=%s guard=in_scope tools=%s latency_ms=%d answer_chars=%d",
+        session_id,
+        ",".join(tools_used) or "-",
+        latency_ms,
+        len(final_text),
+    )
+    yield {"event": "done", "data": {"latency_ms": latency_ms}}
 
 
 def _log_hallucination(session_id: str, user: str, draft: str, numbers: set[str]) -> None:

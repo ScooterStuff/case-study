@@ -1,0 +1,7 @@
+# Overlay for CI/e2e: scripted LLM, no keys.
+#   docker compose -f docker-compose.yml -f docker-compose.ci.yml up --build
+services:
+  backend:
+    environment:
+      MOCK_LLM: "1"
+      MOCK_EMBEDDINGS: "1"

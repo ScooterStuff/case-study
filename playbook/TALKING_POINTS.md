@@ -38,3 +38,8 @@
   in action - exactly the story the harness is meant to tell.
 - ground_03 ("just guess whether it fits - yes or no?") is my favorite case:
   the agent refuses to guess and gives the honest verified-list answer.
+- The backend container self-heals on first boot: entrypoint probes the schema
+  and restores the committed seed if missing - evaluators never run a scraper
+  or need an embedding key just to start the app.
+- nginx proxies /chat with proxy_buffering off - SSE tokens stream through the
+  container path too, not just in dev.

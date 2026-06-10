@@ -137,3 +137,17 @@
     check_untyped_defs in pyproject); ruff (incl. flake8-bandit rules) + format
     enforced in CI and pre-commit. pytest-socket skipped: the no-network property
     is enforced structurally (mock LLM/embeddings, local socket DB).
+
+## Phase 8 — docker & ops
+
+27. **`docker compose up --build`, image sizes, and `make fresh` are not
+    executable in the build sandbox** (no Docker daemon). Everything is
+    authored per the playbook (multi-stage Dockerfiles, non-root user,
+    healthchecks, self-healing seed entrypoint, nginx SSE proxy, ci overlay)
+    and YAML/syntax validated; the runtime behaviors they wrap (seed restore,
+    health endpoint, SSE, MOCK_LLM demo) are all proven by tests against real
+    processes. Final `docker compose up` verification happens on the
+    candidate's machine - it is the first item on the pre-submission checklist.
+28. **stdlib logging with a JSON formatter instead of structlog** - one fewer
+    dependency; same shape (ts/level/logger/request_id/message), pretty in dev
+    via LOG_FORMAT=pretty.
