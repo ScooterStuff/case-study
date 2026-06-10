@@ -107,3 +107,18 @@
     without MOCK_LLM and re-run `python eval/run_eval.py` to regenerate
     RESULTS.md with the real model before submitting. RESULTS.md states the
     model name in its metadata line, so the provenance is always explicit.
+
+## Phase 4 — frontend
+
+20. **CRA adaptation is plain JavaScript + plain CSS** (no TypeScript, no
+    Tailwind/CRACO): the template was JS, and 04 says to implement the same
+    component spec inside it rather than fight the scaffold. Block payload
+    shapes are documented as JSDoc typedefs in `src/lib/blocks.js` pointing at
+    `backend/app/tools.py` as the source of truth.
+21. **Kept the template's `marked` renderer** (agent prose is our own backend's
+    markdown); pruned the template's ~10 unused deps (langchain, antd, rsuite,
+    @anthropic-ai/sdk, pdf-parse, …) down to react, react-dom, react-scripts,
+    marked. `npm run build` passes with CI=true (warnings = errors).
+22. **Browser-interaction acceptance (suggested prompts, fix-it journey, mobile
+    viewport) can't be clicked through in the build sandbox** — wired for
+    Playwright in Phase 7; the demo GIF is recorded on the candidate's machine.
