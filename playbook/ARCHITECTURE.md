@@ -6,7 +6,7 @@ sync if the design changes; this file is the single source of truth.
 
 ```mermaid
 flowchart LR
-    subgraph CLIENT["Frontend — Next.js / React"]
+    subgraph CLIENT["Frontend — React (CRA template, adapted)"]
         UI["Chat UI<br/>streaming + rich blocks"]
         BLOCKS["UI Blocks<br/>ProductCard · CompatResult ·<br/>Diagnosis · InstallGuide ·<br/>OrderStatus · Cart"]
         UI --- BLOCKS
@@ -89,9 +89,9 @@ sequenceDiagram
     A->>T: check_compatibility(PS11752778, WDT780SAEM1)
     F-->>U: tool pill: "Checking compatibility…"
     T->>DB: SELECT … FROM compatibility WHERE …
-    DB-->>T: verified_fit + model count + samples
+    DB-->>T: no_match_found + evidence (fridge part vs dishwasher model)
     T-->>A: result + compat_result ui_block
-    F-->>U: ✓ CompatResult block renders
-    A->>A: draft answer → validator: PS11752778 ∈ tool results ✓
+    F-->>U: ⚠ CompatResult block renders (honest "not in verified list")
+    A->>A: honest draft → validator: PS11752778 ∈ tool results ✓
     A-->>F: streamed tokens → done
 ```

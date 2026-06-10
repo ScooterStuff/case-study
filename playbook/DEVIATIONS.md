@@ -151,3 +151,17 @@
 28. **stdlib logging with a JSON formatter instead of structlog** - one fewer
     dependency; same shape (ts/level/logger/request_id/message), pretty in dev
     via LOG_FORMAT=pretty.
+
+## Hand-off items (require the candidate's machine / accounts)
+
+A. Create the GitHub fork `ScooterStuff/case-study`, add it as `origin`, push
+   `main` + tag `v1.0` (history here is on top of upstream, so it pushes clean).
+B. Drop a `.env` (LLM key), then: restart backend WITHOUT MOCK_LLM and run
+   `make eval` → commit the real-model RESULTS.md; then
+   `make rebuild-data` → commit the real-embedding `seed.sql.gz`.
+C. `docker compose up --build` smoke (both keyed and MOCK_LLM=1) + `make fresh`.
+D. Record `docs/media/journey.gif` + block screenshots (docs/media/README.md),
+   uncomment the README hero image.
+E. Saved HTML pages into `scraper/fixtures/` → `pytest tests/test_parse.py`
+   un-skips the two raw-HTML parser tests; optionally run
+   `python -m scraper.scrape` for the 150+ part catalog.

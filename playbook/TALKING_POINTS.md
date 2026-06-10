@@ -43,3 +43,9 @@
   or need an embedding key just to start the app.
 - nginx proxies /chat with proxy_buffering off - SSE tokens stream through the
   container path too, not just in dev.
+- Fresh-clone proof: `git clone` to a temp dir + pip install + pytest = fully
+  green with zero network/API dependencies - the committed seed and datasets
+  carry everything.
+- The README's limitations section is deliberate seniority signaling: partial
+  cross-reference data, mock orders, 34-part slice - each named, each with the
+  mitigation already in the code.
