@@ -1,0 +1,14 @@
+node_modules/
+.env
+__pycache__/
+*.pyc
+.venv/
+venv/
+scraper/data/raw_html/
+.next/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+playwright-report/
+test-results/

@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+httpx
+beautifulsoup4
+lxml
+psycopg[binary]
+pgvector
+openai
+pydantic>=2
+pydantic-settings
+python-dotenv
+sse-starlette
