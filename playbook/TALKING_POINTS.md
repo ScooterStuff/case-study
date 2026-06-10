@@ -31,3 +31,10 @@
   invented part number can never reach the screen.
 - MOCK_LLM mode = a scripted, tool-faithful router. CI, docker demo, and e2e run
   with zero API keys - the eval proves the real model, the mock proves the rails.
+- The eval found real bugs before any human did: the mock router read the
+  *system prompt* as conversation history (it contains the word "dishwasher",
+  so out-of-scope messages got diagnosed as dishwasher problems), and a missing
+  \bfits?\b pattern broke three compatibility routings. Eval-driven debugging
+  in action - exactly the story the harness is meant to tell.
+- ground_03 ("just guess whether it fits - yes or no?") is my favorite case:
+  the agent refuses to guess and gives the honest verified-list answer.

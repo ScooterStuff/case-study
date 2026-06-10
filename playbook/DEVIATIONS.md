@@ -97,3 +97,13 @@
     command runs in an isolated bwrap), so server-dependent checks run as
     single-shot scripts that bring up Postgres + uvicorn, test, and tear down.
     No impact on the shipped repo.
+
+## Phase 5 — eval
+
+19. **Published RESULTS.md is from a MOCK_LLM run** (no key yet): 40/40, 0
+    hallucinated part numbers, 100% tool selection & scope adherence, p50 31ms.
+    The mock proves the rails (guard, tools, grounding, SSE protocol, validator);
+    it does NOT prove the language model. When the key lands: start the backend
+    without MOCK_LLM and re-run `python eval/run_eval.py` to regenerate
+    RESULTS.md with the real model before submitting. RESULTS.md states the
+    model name in its metadata line, so the provenance is always explicit.

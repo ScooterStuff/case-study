@@ -40,7 +40,12 @@ OTHER_APPLIANCE_RE = re.compile(
 def classify(message: str, history_in_scope: bool = False) -> str:
     """-> 'in_scope' | 'out_of_scope' | 'injection' | 'other_appliance'"""
     if INJECTION_RE.search(message):
-        return "injection"
+        # An injection payload embedded in an otherwise-valid parts question is
+        # let through: the system prompt + hallucination gate hold the line, and
+        # the agent answers the legitimate part while ignoring the payload.
+        if not (CORE_APPLIANCE_RE.search(message)):
+            return "injection"
+        logger.warning("injection pattern inside in-scope message - passing to agent: %.80s", message)
     if OTHER_APPLIANCE_RE.search(message) and not CORE_APPLIANCE_RE.search(message):
         return "other_appliance"
     if IN_SCOPE_RE.search(message):

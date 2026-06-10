@@ -76,8 +76,9 @@ class MockLLM:
         if call is not None:
             yield ("tool_calls", [call])
             return
-        text = ("Happy to help with refrigerator or dishwasher parts! Tell me a "
-                "part number, your model number, or describe the symptom.")
+        text = ("Happy to help! Which appliance is acting up - your refrigerator "
+                "or your dishwasher - and what is it doing? A part number or "
+                "model number works too.")
         for i in range(0, len(text), 24):
             yield ("token", text[i:i + 24])
 
@@ -99,7 +100,8 @@ class MockLLM:
         ps = ps_numbers[0] if ps_numbers else None
 
         def hist_text() -> str:
-            return " ".join(str(m.get("content", "")) for m in messages[:-1])
+            return " ".join(str(m.get("content", "")) for m in messages[:-1]
+                            if m.get("role") != "system")
 
         if not ps and re.search(r"\b(this|that|the) part\b", low):
             prev = PS_RE.findall(hist_text())
@@ -127,8 +129,14 @@ class MockLLM:
             cands = [c for c in MPN_RE.findall(msg.upper()) if not c.startswith("PS")]
             if re.search(r"compatib|fit", low) and cands:
                 model = cands[-1]
+        if model is None and re.search(r"compatib|\bfits?\b", low):
+            m2 = re.search(r"(?:with|fit)s? my ([a-z0-9][a-z0-9 \-]{4,})[\?\.!]?$", low)
+            if m2:
+                cand = re.sub(r"[^a-z0-9]", "", m2.group(1)).upper()
+                if re.search(r"\d", cand) and not cand.startswith("PS"):
+                    model = cand
 
-        if re.search(r"compatib|does (it|this) fit|will (it|this) fit|fit my", low) and (ps or model):
+        if re.search(r"compatib|\bfits?\b", low) and (ps or model):
             if ps and model:
                 return self._call("check_compatibility", part_identifier=ps, model_number=model)
             if model:
@@ -140,11 +148,16 @@ class MockLLM:
             return self._call("get_installation_guide", part_identifier=ps)
         if ps:
             return self._call("get_part_details", part_identifier=ps)
+        if re.search(r"\bpart\b|\bnumber\b|tell me about", low):
+            cands = [c for c in MPN_RE.findall(msg.upper())
+                     if not c.startswith("PS") and c != (model or "")]
+            if cands:
+                return self._call("get_part_details", part_identifier=cands[0])
         if appliance and re.search(r"not work|won'?t|isn'?t|broken|leak|nois|too warm|too cold|"
                                    r"not (mak|clean|drain|dry|start|dispens)|stopped|problem|fix", low):
             return self._call("diagnose_issue", symptom_description=msg,
                               appliance_type=appliance, brand=self._brand(low))
-        if re.search(r"need|find|looking for|search|thing|recommend|buy", low):
+        if re.search(r"\bneed\b|\bfind\b|looking for|\bsearch\b|\bthing\b|recommend|\bbuy\b", low):
             return self._call("search_parts", query=msg, appliance_type=appliance)
         return None
 
