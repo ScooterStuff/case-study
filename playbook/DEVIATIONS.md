@@ -35,3 +35,34 @@
 9. **Fork `ScooterStuff/case-study` not reachable yet** (clone 404s). Built on a full
    clone of `Instalily/case-study` with the remote named `upstream`; history is intact
    so the work can be pushed to the fork once it exists / credentials are provided.
+
+## Phase 1 — scraping
+
+10. **PS11752778 is NOT a dishwasher door balance link kit.** The playbook said to
+    verify it as one; the live site says it is a **Whirlpool Refrigerator Door Shelf
+    Bin (WPW10321304)**, $47.40, In Stock. Reality wins: the dataset stores the truth.
+    Consequence: spec query 2 ("Is this part compatible with my WDT780SAEM1 model?")
+    correctly answers *not a verified fit* when "this part" = PS11752778 (a fridge
+    bin vs. a dishwasher model) — the agent explains this gracefully and offers the
+    12 parts that ARE verified for WDT780SAEM1. The 01 acceptance item
+    "compatibility.json includes (PS11752778, WDT780SAEM1)" is therefore
+    intentionally unmet; the model's own parts list was harvested instead.
+11. **No raw-HTML access from the build environment.** Only text *extractions* of
+    live pages were retrievable (and no browser was connected), so:
+    - `scraper/parse.py` (raw-HTML parsers per the playbook selectors) is written
+      but its fixture tests stay **skipped until the candidate drops saved HTML
+      pages into `scraper/fixtures/`**.
+    - The committed datasets were built from live-page text extractions via
+      `scraper/extract_text.py` (real data, every record carries `source_url` +
+      `scraped_at`). One extraction is committed as a test fixture.
+12. **Dataset volume below the 150-part target: 34 parts** (19 dishwasher / 15
+    refrigerator, incl. all spec-critical records), 1,136 compatibility rows
+    (≥1,000 ✓), 21 repair guides (≥16 ✓). The playbook's documented fallback
+    applies ("the architecture, not crawl volume, is evaluated"); running
+    `python -m scraper.scrape` on a normal machine scales the same pipeline to the
+    full target without code changes.
+13. **Repair guides are two-tier**: 2 `detail_level: "full"` guides with ranked
+    causes + inspection steps (refrigerator Not-Making-Ice, dishwasher
+    Not-Draining — the two the spec queries need), 19 `detail_level: "summary"`
+    guides from the official symptom-index blurbs (title, % reported, summary,
+    source URL). scrape.py upgrades summaries to full when run with HTML access.

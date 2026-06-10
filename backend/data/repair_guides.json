@@ -1,0 +1,378 @@
+[
+ {
+  "appliance": "refrigerator",
+  "symptom": "Noisy",
+  "slug": "Noisy",
+  "intro": "When your fridge is noisy, find out how to repair it by troubleshooting the location of the noise, from the evaporator fan motor in the freezer to the bottom of the fridge with the condenser fan motor.",
+  "percent_reported": 29,
+  "difficulty": "",
+  "repair_story_count": null,
+  "video_count": null,
+  "causes": [],
+  "detail_level": "summary",
+  "source_url": "https://www.partselect.com/Repair/Refrigerator/Noisy/",
+  "scraped_at": "2026-06-10T19:55:22Z"
+ },
+ {
+  "appliance": "refrigerator",
+  "symptom": "Leaking",
+  "slug": "Leaking",
+  "intro": "Diagnose the reason for your leaking fridge, from a faulty water inlet valve to a worn out door seal.",
+  "percent_reported": 27,
+  "difficulty": "",
+  "repair_story_count": null,
+  "video_count": null,
+  "causes": [],
+  "detail_level": "summary",
+  "source_url": "https://www.partselect.com/Repair/Refrigerator/Leaking/",
+  "scraped_at": "2026-06-10T19:55:22Z"
+ },
+ {
+  "appliance": "refrigerator",
+  "symptom": "Will not start",
+  "slug": "Will-Not-Start",
+  "intro": "Find out how to fix a fridge that will not start, by examining a few key parts such as the temperature control or the compressor overload relay.",
+  "percent_reported": 18,
+  "difficulty": "",
+  "repair_story_count": null,
+  "video_count": null,
+  "causes": [],
+  "detail_level": "summary",
+  "source_url": "https://www.partselect.com/Repair/Refrigerator/Will-Not-Start/",
+  "scraped_at": "2026-06-10T19:55:22Z"
+ },
+ {
+  "appliance": "refrigerator",
+  "symptom": "Fridge too warm",
+  "slug": "Refrigerator-Too-Warm",
+  "intro": "If your fridge is too warm then troubleshoot common parts like the air inlet damper.",
+  "percent_reported": 6,
+  "difficulty": "",
+  "repair_story_count": null,
+  "video_count": null,
+  "causes": [],
+  "detail_level": "summary",
+  "source_url": "https://www.partselect.com/Repair/Refrigerator/Refrigerator-Too-Warm/",
+  "scraped_at": "2026-06-10T19:55:22Z"
+ },
+ {
+  "appliance": "refrigerator",
+  "symptom": "Not dispensing water",
+  "slug": "Not-Dispensing-Water",
+  "intro": "If the water dispenser is not dispensing water then examine key parts such as the water inlet valve and dispenser actuator.",
+  "percent_reported": 3,
+  "difficulty": "",
+  "repair_story_count": null,
+  "video_count": null,
+  "causes": [],
+  "detail_level": "summary",
+  "source_url": "https://www.partselect.com/Repair/Refrigerator/Not-Dispensing-Water/",
+  "scraped_at": "2026-06-10T19:55:22Z"
+ },
+ {
+  "appliance": "refrigerator",
+  "symptom": "Fridge and Freezer are too warm",
+  "slug": "Refrigerator-Freezer-Too-Warm",
+  "intro": "Diagnose the causes of why the fridge and freezer are too warm by checking a few key parts such as the defrost timer, defrost heater, defrost thermostat or evaporator fan motor.",
+  "percent_reported": 3,
+  "difficulty": "",
+  "repair_story_count": null,
+  "video_count": null,
+  "causes": [],
+  "detail_level": "summary",
+  "source_url": "https://www.partselect.com/Repair/Refrigerator/Refrigerator-Freezer-Too-Warm/",
+  "scraped_at": "2026-06-10T19:55:22Z"
+ },
+ {
+  "appliance": "refrigerator",
+  "symptom": "Door Sweating",
+  "slug": "Door-Sweating",
+  "intro": "When the fridge has doors that are sweating then examine key components such as the door gasket, seals and the hinges.",
+  "percent_reported": 1,
+  "difficulty": "",
+  "repair_story_count": null,
+  "video_count": null,
+  "causes": [],
+  "detail_level": "summary",
+  "source_url": "https://www.partselect.com/Repair/Refrigerator/Door-Sweating/",
+  "scraped_at": "2026-06-10T19:55:22Z"
+ },
+ {
+  "appliance": "refrigerator",
+  "symptom": "Light not working",
+  "slug": "Light-Not-Working",
+  "intro": "Learn how to fix the fridge when the light won't turn on but the door is opened.",
+  "percent_reported": 1,
+  "difficulty": "",
+  "repair_story_count": null,
+  "video_count": null,
+  "causes": [],
+  "detail_level": "summary",
+  "source_url": "https://www.partselect.com/Repair/Refrigerator/Light-Not-Working/",
+  "scraped_at": "2026-06-10T19:55:22Z"
+ },
+ {
+  "appliance": "refrigerator",
+  "symptom": "Fridge too cold",
+  "slug": "Refrigerator-Too-Cold",
+  "intro": "Find out how to repair a fridge that's too cold by troubleshooting the common problem parts like a temperature control or thermistor.",
+  "percent_reported": 1,
+  "difficulty": "",
+  "repair_story_count": null,
+  "video_count": null,
+  "causes": [],
+  "detail_level": "summary",
+  "source_url": "https://www.partselect.com/Repair/Refrigerator/Refrigerator-Too-Cold/",
+  "scraped_at": "2026-06-10T19:55:22Z"
+ },
+ {
+  "appliance": "refrigerator",
+  "symptom": "Fridge runs too long",
+  "slug": "Running-Too-Long",
+  "intro": "Troubleshoot why the fridge is running too long by examining some of the key parts like a faulty defrost timer or the thermostats.",
+  "percent_reported": 1,
+  "difficulty": "",
+  "repair_story_count": null,
+  "video_count": null,
+  "causes": [],
+  "detail_level": "summary",
+  "source_url": "https://www.partselect.com/Repair/Refrigerator/Running-Too-Long/",
+  "scraped_at": "2026-06-10T19:55:22Z"
+ },
+ {
+  "appliance": "refrigerator",
+  "symptom": "Freezer too cold",
+  "slug": "Freezer-Too-Cold",
+  "intro": "Determine why your freezer is too cold by troubleshooting parts, like the air damper or thermistor.",
+  "percent_reported": 1,
+  "difficulty": "",
+  "repair_story_count": null,
+  "video_count": null,
+  "causes": [],
+  "detail_level": "summary",
+  "source_url": "https://www.partselect.com/Repair/Refrigerator/Freezer-Too-Cold/",
+  "scraped_at": "2026-06-10T19:55:22Z"
+ },
+ {
+  "appliance": "dishwasher",
+  "symptom": "Noisy",
+  "slug": "Noisy",
+  "intro": "Learn how to troubleshoot and repair a noisy dishwasher by the type of noise it makes, from the rattle of a pump housing or motor bushings, to a worn washer arm bearing.",
+  "percent_reported": 29,
+  "difficulty": "",
+  "repair_story_count": null,
+  "video_count": null,
+  "causes": [],
+  "detail_level": "summary",
+  "source_url": "https://www.partselect.com/Repair/Dishwasher/Noisy/",
+  "scraped_at": "2026-06-10T19:55:22Z"
+ },
+ {
+  "appliance": "dishwasher",
+  "symptom": "Leaking",
+  "slug": "Leaking",
+  "intro": "Diagnose the reason for your leaking dishwasher, from a worn pump and door seals, to a failed water inlet valve.",
+  "percent_reported": 27,
+  "difficulty": "",
+  "repair_story_count": null,
+  "video_count": null,
+  "causes": [],
+  "detail_level": "summary",
+  "source_url": "https://www.partselect.com/Repair/Dishwasher/Leaking/",
+  "scraped_at": "2026-06-10T19:55:22Z"
+ },
+ {
+  "appliance": "dishwasher",
+  "symptom": "Will not start",
+  "slug": "Will-Not-Start",
+  "intro": "Learn how to fix a dishwasher that will not start, by checking a few key components, such as door latch switches, timers, electronic controls, motor relays and thermal fuses.",
+  "percent_reported": 18,
+  "difficulty": "",
+  "repair_story_count": null,
+  "video_count": null,
+  "causes": [],
+  "detail_level": "summary",
+  "source_url": "https://www.partselect.com/Repair/Dishwasher/Will-Not-Start/",
+  "scraped_at": "2026-06-10T19:55:22Z"
+ },
+ {
+  "appliance": "dishwasher",
+  "symptom": "Door latch failure",
+  "slug": "Door-Latch-Failure",
+  "intro": "Find out how to fix a dishwasher door latch that isn't working properly by troubleshooting common repair parts like the door latch kit.",
+  "percent_reported": 11,
+  "difficulty": "",
+  "repair_story_count": null,
+  "video_count": null,
+  "causes": [],
+  "detail_level": "summary",
+  "source_url": "https://www.partselect.com/Repair/Dishwasher/Door-Latch-Failure/",
+  "scraped_at": "2026-06-10T19:55:22Z"
+ },
+ {
+  "appliance": "dishwasher",
+  "symptom": "Not cleaning dishes properly",
+  "slug": "Not-Cleaning-Properly",
+  "intro": "Determine why your dishwasher will not clean properly by troubleshooting parts, like housing gaskets, spray arms, water delivery tubes and filters.",
+  "percent_reported": 11,
+  "difficulty": "",
+  "repair_story_count": null,
+  "video_count": null,
+  "causes": [],
+  "detail_level": "summary",
+  "source_url": "https://www.partselect.com/Repair/Dishwasher/Not-Cleaning-Properly/",
+  "scraped_at": "2026-06-10T19:55:22Z"
+ },
+ {
+  "appliance": "dishwasher",
+  "symptom": "Will not fill with water",
+  "slug": "Will-Not-Fill-Water",
+  "intro": "Diagnose why your dishwasher will not fill with water by checking and testing a water inlet valve, float switch and door switch.",
+  "percent_reported": 2,
+  "difficulty": "",
+  "repair_story_count": null,
+  "video_count": null,
+  "causes": [],
+  "detail_level": "summary",
+  "source_url": "https://www.partselect.com/Repair/Dishwasher/Will-Not-Fill-Water/",
+  "scraped_at": "2026-06-10T19:55:22Z"
+ },
+ {
+  "appliance": "dishwasher",
+  "symptom": "Will not dispense detergent",
+  "slug": "Will-Not-Dispense-Detergent",
+  "intro": "Learn how to repair a dishwasher that will not dispense detergent by testing the bi-metal release, wax motor and timer.",
+  "percent_reported": 2,
+  "difficulty": "",
+  "repair_story_count": null,
+  "video_count": null,
+  "causes": [],
+  "detail_level": "summary",
+  "source_url": "https://www.partselect.com/Repair/Dishwasher/Will-Not-Dispense-Detergent/",
+  "scraped_at": "2026-06-10T19:55:22Z"
+ },
+ {
+  "appliance": "dishwasher",
+  "symptom": "Not drying dishes properly",
+  "slug": "Not-Drying-Properly",
+  "intro": "Find out how to troubleshoot and repair a dishwasher that will not properly dry dishes, by checking heating elements, high limit thermostats and rinse aid dispensers.",
+  "percent_reported": 1,
+  "difficulty": "",
+  "repair_story_count": null,
+  "video_count": null,
+  "causes": [],
+  "detail_level": "summary",
+  "source_url": "https://www.partselect.com/Repair/Dishwasher/Not-Drying-Properly/",
+  "scraped_at": "2026-06-10T19:55:22Z"
+ },
+ {
+  "appliance": "refrigerator",
+  "symptom": "How To Fix A Refrigerator That's Not Making Ice",
+  "slug": "Not-Making-Ice",
+  "intro": "Find out how to repair a refrigerator ice maker that's not making ice by troubleshooting common problems and parts like water inlet valves and water filters.",
+  "percent_reported": 6,
+  "difficulty": "EASY",
+  "repair_story_count": 3458,
+  "video_count": 23,
+  "detail_level": "full",
+  "source_url": "https://www.partselect.com/Repair/Refrigerator/Not-Making-Ice/",
+  "causes": [
+   {
+    "rank": 1,
+    "name": "Water Fill Tubes",
+    "part_links": [
+     "https://www.partselect.com/Refrigerator-Hoses-and-Tubes.htm"
+    ],
+    "text": "Inspect the ice maker mold to see if there are ice cubes present. If there are no cubes or very small cubes, look for issues with the water fill system. How to inspect: 1. Disconnect both the power and water source. 2. At the back of the icemaker, inspect the fill tube and fill cup area to make sure they are not frozen; if there is ice buildup, confirm no foreign objects have disrupted the flow of water into the fill cup. 3. Inspect the outlet tubing from the fill valve to the ice maker fill tube for restrictions. 4. If you find issues, you need replacement water fill tubes."
+   },
+   {
+    "rank": 2,
+    "name": "Water Inlet Valve",
+    "part_links": [
+     "https://www.partselect.com/Refrigerator-Valves.htm"
+    ],
+    "text": "Some water inlet valves have a screen to filter debris; if plugged, water flow is restricted and the result is small or layered ice cubes - remove and clean the screen if clogged. If dirt has gotten into the valve it may not shut off completely and will continuously drip water into the ice maker fill tube and eventually freeze up. Low household water pressure or a restriction at the manual shut-off valve causes the same condition (self-piercing saddle valves are the most common culprit). How to test with a multimeter: 1. Disconnect power and water. 2. Remove the rear access panel; the valve is usually near the bottom. 3. Look for leaks or loose connectors, cracks or damage in the valve body. 4. Inspect outlet tubing for brittleness, abrasions, or cracks. 5. Remove the valve to test it. 6. On Rx1, touch the terminals - expect continuity of 200 to 500 ohms. 7. Any other reading means you need a replacement water inlet valve."
+   },
+   {
+    "rank": 3,
+    "name": "Ice & Water Filter",
+    "part_links": [
+     "https://www.partselect.com/Refrigerator-Filters.htm"
+    ],
+    "text": "The ice and water filter removes debris and contaminants from your water. Over time the filter becomes restricted, reducing water flow to the ice maker and causing little or no ice. Most manufacturers recommend replacing the filter every 6 months (never go longer than 12). How to inspect: 1. Determine when you last replaced the filter. 2. Locate it - often inside the unit attached to the ceiling or back corner, behind the base grill, or in the water line (turn off the water supply first if in-line). 3. Follow brand-specific install instructions; note the install date on the new filter. 4. If past the recommended interval or damaged, replace the filter."
+   },
+   {
+    "rank": 4,
+    "name": "Ice Maker Assembly & Replacement Ice Maker",
+    "part_links": [
+     "https://www.partselect.com/Refrigerator-Ice-Makers.htm"
+    ],
+    "text": "If there are no ice buildup issues or suspected water-supply problems, you may have a problem with the ice maker control. The most common type in modern refrigerators is the heat-release ice maker; its test involves live voltage and should only be performed by a qualified professional. How to inspect the assembly: 1. Disconnect the water source and unplug the refrigerator. 2. Open the freezer door and inspect the fill cup area and fill tube for damage, wear, or freezing. 3. Inspect outlet tubing from the fill valve for restrictions. 4. If there is ice buildup, confirm no foreign objects disrupted water flow and allow the freezer to defrost. 5. If issues persist after defrosting, you need a replacement ice maker assembly; if nothing obvious caused the buildup, suspect the inlet valve or tubing."
+   }
+  ],
+  "scraped_at": "2026-06-10T19:55:22Z"
+ },
+ {
+  "appliance": "dishwasher",
+  "symptom": "How To Fix A Dishwasher That Won't Drain",
+  "slug": "Not-Draining",
+  "intro": "Learn how to repair a dishwasher that's not draining properly by troubleshooting common problems and parts like the motor, belt and drain hose.",
+  "percent_reported": 9,
+  "difficulty": "EASY",
+  "repair_story_count": 564,
+  "video_count": 7,
+  "detail_level": "full",
+  "source_url": "https://www.partselect.com/Repair/Dishwasher/Not-Draining/",
+  "causes": [
+   {
+    "rank": 1,
+    "name": "Piston & Nut Assembly",
+    "part_links": [
+     "https://www.partselect.com/Dishwasher-Parts.htm"
+    ],
+    "text": "Some models of dishwashers utilize a check valve as part of the drain pump. Within the check valve, there is the piston and nut assembly. If your dishwasher is not draining water properly, the piston and nut assembly could be the source of the problem. How to inspect: 1. Disconnect your appliance from the power source. 2. Locate your piston & nut assembly - likely on the bottom of the tub, beneath the sump cover. 3. The assembly should move up and down freely; when the piston is in the down position it should form a tight seal. If it is not forming a complete seal, the dishwasher will not completely pump out the water. 4. If you find issues, you will need a replacement piston & nut assembly."
+   },
+   {
+    "rank": 2,
+    "name": "Drain Pump & Motor",
+    "part_links": [
+     "https://www.partselect.com/Dishwasher-Pumps.htm"
+    ],
+    "text": "Most models have a single motor driven pump with two compartments (circulation and drain), each with its own impeller. Others have a separate drain pump, or use the main circulating pump with a drain solenoid and diverter valve or flapper. On models with a separate drain pump, check for obstructions at the pump input/output and verify power reaches the pump motor during the drain portion of the cycle. How to test with a multimeter: 1. Disconnect power. 2. Remove the pump (behind the lower access panel). 3. On Rx1 mode, touch the pump terminals with the probes - expect a reading of zero or nearly zero; then test ground by touching one probe to the bare metal housing - this should produce no reading. 4. If results differ, you need a replacement pump."
+   },
+   {
+    "rank": 3,
+    "name": "Check Valve Flapper",
+    "part_links": [
+     "https://www.partselect.com/Dishwasher-Parts.htm"
+    ],
+    "text": "Some models use a check valve in the drain outlet that lets water flow one way and prevents dirty water re-entering the dishwasher. If the drain hose has a restriction or wastewater gets back into the tub, the check valve is most likely the problem. How to inspect: 1. Unplug the dishwasher. 2. Locate the flapper - usually on the outlet port of the drain pump or housing, behind the lower access panel. 3. Look for wear or damage and clear any debris preventing the flapper from moving freely. 4. If damaged, you need a replacement check valve flapper."
+   },
+   {
+    "rank": 4,
+    "name": "Belt",
+    "part_links": [
+     "https://www.partselect.com/Dishwasher-Parts.htm"
+    ],
+    "text": "Some older dishwashers use a belt-driven pump. If the belt has come off or is slipping, the pump that drains the dishwasher won't function properly. How to inspect: 1. Disconnect power. 2. The belt is behind the lower access panel, attached to a pulley on the pump assembly and another on the motor assembly; remove it to inspect closely. 3. Look for burning, stretching, cracking, damage, or wear. 4. Replace the belt if you find any issues."
+   },
+   {
+    "rank": 5,
+    "name": "Timer",
+    "part_links": [
+     "https://www.partselect.com/Dishwasher-Timers.htm"
+    ],
+    "text": "Some dishwashers use a mechanical timer (normally in the control panel at the top of the door) to operate the cycles, controlling the main pump motor and the drain solenoid or separate drain pump motor. You need the wiring diagram/schematic to identify the timer contacts that control the drain cycle, then check them for continuity. How to test: 1. Unplug the dishwasher. 2. Find the timer in the control panel or behind the lower kickplate. 3. Refer to the owner's manual for which contact sets to test. 4. Set a multimeter to Rx1000 and touch the contacts - functional timers typically read 2000-3500 ohms (varies by model). 5. If results differ from the manufacturer's guidelines, replace the timer."
+   },
+   {
+    "rank": 6,
+    "name": "Drain Hose",
+    "part_links": [
+     "https://www.partselect.com/Dishwasher-Hoses-and-Tubes.htm"
+    ],
+    "text": "A dishwasher will not drain properly with a restricted or clogged drain hose. Restrictions typically appear at the outlet from the pump or drain housing where a check valve may be located, at the input to the household drain system, or anywhere a kink has formed. If food debris caused a restriction, also check the condition of the food chopper. How to inspect: 1. Disconnect water and power. 2. Remove the lower access panel; the hose connects to a pump below the lower spray arm. 3. Remove the hose, look for cracking, damage or wear, and run water through it to find blockages. 4. Replace the hose if any issues are found."
+   }
+  ],
+  "scraped_at": "2026-06-10T19:55:22Z"
+ }
+]
