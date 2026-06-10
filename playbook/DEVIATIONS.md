@@ -86,3 +86,14 @@
     `check_compat('PS3406971','WDT780SAEM1')` covers the `verified_fit` path.
     `pg_dump` is taken with `--inserts` so `--load-seed` works through psycopg
     with no psql dependency.
+
+## Phase 3 — agent
+
+17. **Smoke + agent tests run in MOCK_LLM mode** (no API key yet). The mock is a
+    deterministic router that obeys the same tool contracts and grounding rules;
+    the SSE protocol, guard, tools, and hallucination gate are fully exercised.
+    Re-run `backend/smoke.sh` + the eval with the real LLM once the key lands.
+18. **Background processes do not survive between build-sandbox commands** (each
+    command runs in an isolated bwrap), so server-dependent checks run as
+    single-shot scripts that bring up Postgres + uvicorn, test, and tear down.
+    No impact on the shipped repo.

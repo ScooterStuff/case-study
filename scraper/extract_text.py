@@ -93,8 +93,11 @@ def parse_part_extraction(text: str, url: str) -> tuple[Part, list[Compatibility
                                    repair_time=s_m.group("t").strip()))
         if len(stories) >= 5:
             break
-    videos = [{"url": u, "title": ""} for u in
-              dict.fromkeys(re.findall(r"https://www\.youtube\.com/watch[^)\"\s]+", text))]
+    yt = list(dict.fromkeys(
+        re.findall(r"https://www\.youtube\.com/watch[^)\"\s]+", text)
+        + [f"https://www.youtube.com/watch?v={vid}"
+           for vid in re.findall(r"i\.ytimg\.com/vi/([A-Za-z0-9_-]{6,})/", text)]))
+    videos = [{"url": u, "title": ""} for u in yt]
 
     part = Part(
         ps_number=norm_number(ps.group(1)) if ps else "",

@@ -22,3 +22,12 @@
 - check_compat returns a four-state enum with *evidence* (how many models the part
   is verified for, whether the model exists in our data at all) — the agent's
   honesty about partial data is engineered in the data layer, not prompted.
+- The hallucination gate is mechanical, not vibes: regex-scan the final draft,
+  any PS number not seen in this conversation's tool results (or typed by the
+  user) triggers a retry-with-nudge, then strip-and-caveat. Every trigger is
+  logged; the log being empty after the eval is a README stat.
+- Buffer-and-release streaming: tool status events stream live, final prose is
+  held ~100ms for the hallucination check - invisible to users, but it means an
+  invented part number can never reach the screen.
+- MOCK_LLM mode = a scripted, tool-faithful router. CI, docker demo, and e2e run
+  with zero API keys - the eval proves the real model, the mock proves the rails.
