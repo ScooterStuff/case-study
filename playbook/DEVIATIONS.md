@@ -66,3 +66,23 @@
     Not-Draining — the two the spec queries need), 19 `detail_level: "summary"`
     guides from the official symptom-index blurbs (title, % reported, summary,
     source URL). scrape.py upgrades summaries to full when run with HTML access.
+
+## Phase 2 — data layer
+
+14. **No Docker in the build sandbox → `pgserver` (pip) for local Postgres.** All
+    retrieval tests run against an embedded Postgres 16.2 with pgvector 0.6.2 —
+    a *real* Postgres, not a fake. `docker-compose.yml` (db service per the
+    playbook) is authored and is the evaluator path; `docker compose up -d db`
+    itself must be smoke-tested on the candidate's machine.
+15. **Committed `seed.sql.gz` currently contains MOCK embeddings** (no embedding
+    API key available yet). The restore path is fully verified keyless (34 parts /
+    1,130 compat rows / 358 embeddings). When the key lands: re-run
+    `python backend/ingest.py --rebuild && python backend/ingest.py --dump-seed`
+    to swap in real vectors (est. cost < $0.01).
+16. **02 acceptance deltas, all traced to earlier deviations:** parts count is 34
+    not ≥150 (#12); `get_part('PS11752778')` returns the *door shelf bin* not a
+    "door balance link kit" (#10); `check_compat('PS11752778','WDT780SAEM1')`
+    correctly returns `no_match_found` with evidence, not `verified_fit` (#10) —
+    `check_compat('PS3406971','WDT780SAEM1')` covers the `verified_fit` path.
+    `pg_dump` is taken with `--inserts` so `--load-seed` works through psycopg
+    with no psql dependency.

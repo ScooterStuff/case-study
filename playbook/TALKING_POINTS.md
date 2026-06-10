@@ -16,3 +16,9 @@
 - Compatibility rows carry provenance (`source: crossref | qna | model_page`) —
   Q&A-harvested fits are weaker signals than the official cross-reference table
   and the agent can say so.
+- The whole data layer runs three ways with zero code changes: Docker pgvector
+  (production/evaluator), pip-installed embedded Postgres (keyless tests anywhere),
+  CI service container. Same schema, same SQL.
+- check_compat returns a four-state enum with *evidence* (how many models the part
+  is verified for, whether the model exists in our data at all) — the agent's
+  honesty about partial data is engineered in the data layer, not prompted.

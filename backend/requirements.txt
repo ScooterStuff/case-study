@@ -10,3 +10,4 @@ pydantic>=2
 pydantic-settings
 python-dotenv
 sse-starlette
+numpy

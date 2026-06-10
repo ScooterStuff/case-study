@@ -1,0 +1,4 @@
+pytest
+pytest-cov
+numpy
+pgserver ; sys_platform != 'win32'   # embedded postgres+pgvector for keyless local tests
