@@ -2,12 +2,13 @@
 ui_block is an optional pre-shaped payload the frontend renders as a rich
 component. Tool *facts* come exclusively from the Phase 2 retrieval layer.
 """
+
 from __future__ import annotations
 
 import hashlib
 import re
 from datetime import date, timedelta
-from typing import Any, Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -18,14 +19,18 @@ PS_RE = re.compile(r"PS\d{5,9}")
 
 # ------------------------------------------------------------------ schemas
 
+
 class SearchPartsIn(BaseModel):
     query: str = Field(description="What the customer is looking for, in their words")
-    appliance_type: Optional[Literal["refrigerator", "dishwasher"]] = Field(
-        None, description="Filter when the appliance is known")
+    appliance_type: Literal["refrigerator", "dishwasher"] | None = Field(
+        None, description="Filter when the appliance is known"
+    )
 
 
 class PartDetailsIn(BaseModel):
-    part_identifier: str = Field(description="PS number, manufacturer part number, or an old superseded number")
+    part_identifier: str = Field(
+        description="PS number, manufacturer part number, or an old superseded number"
+    )
 
 
 class CompatibilityIn(BaseModel):
@@ -36,7 +41,7 @@ class CompatibilityIn(BaseModel):
 class DiagnoseIn(BaseModel):
     symptom_description: str
     appliance_type: Literal["refrigerator", "dishwasher"]
-    brand: Optional[str] = None
+    brand: str | None = None
 
 
 class InstallGuideIn(BaseModel):
@@ -45,37 +50,65 @@ class InstallGuideIn(BaseModel):
 
 class OrderSupportIn(BaseModel):
     action: Literal["order_status", "return", "cancel"]
-    order_id: Optional[str] = None
-    email: Optional[str] = None
+    order_id: str | None = None
+    email: str | None = None
 
 
 # ------------------------------------------------------------------- helpers
 
+
 def _card(p: dict) -> dict:
-    return {k: p.get(k) for k in (
-        "ps_number", "mpn", "brand", "title", "price", "availability",
-        "install_difficulty", "install_time", "rating", "review_count",
-        "image_url", "product_url", "appliance_type")}
+    return {
+        k: p.get(k)
+        for k in (
+            "ps_number",
+            "mpn",
+            "brand",
+            "title",
+            "price",
+            "availability",
+            "install_difficulty",
+            "install_time",
+            "rating",
+            "review_count",
+            "image_url",
+            "product_url",
+            "appliance_type",
+        )
+    }
 
 
 # --------------------------------------------------------------------- tools
 
+
 def search_parts(query: str, appliance_type: str | None = None) -> dict:
     parts = retrieval.hybrid_search(query, appliance_type, k=6)
-    return {"data": {"results": [_card(p) for p in parts], "query": query},
-            "ui_block": {"type": "product_list", "products": [_card(p) for p in parts]} if parts else None}
+    return {
+        "data": {"results": [_card(p) for p in parts], "query": query},
+        "ui_block": {"type": "product_list", "products": [_card(p) for p in parts]} if parts else None,
+    }
 
 
 def get_part_details(part_identifier: str) -> dict:
     part = retrieval.get_part(part_identifier)
     if part is None:
-        return {"data": {"found": False, "identifier": part_identifier,
-                         "note": "No part with that number in our catalog. Ask the user to double-check it."},
-                "ui_block": None}
-    return {"data": {"found": True, **part},
-            "ui_block": {"type": "product_card", "product": _card(part),
-                         "description": (part.get("description") or "")[:400],
-                         "symptoms": part.get("symptoms", [])}}
+        return {
+            "data": {
+                "found": False,
+                "identifier": part_identifier,
+                "note": "No part with that number in our catalog. Ask the user to double-check it.",
+            },
+            "ui_block": None,
+        }
+    return {
+        "data": {"found": True, **part},
+        "ui_block": {
+            "type": "product_card",
+            "product": _card(part),
+            "description": (part.get("description") or "")[:400],
+            "symptoms": part.get("symptoms", []),
+        },
+    }
 
 
 def check_compatibility(part_identifier: str, model_number: str) -> dict:
@@ -86,17 +119,28 @@ def check_compatibility(part_identifier: str, model_number: str) -> dict:
     honesty = {
         "verified_fit": "Verified against PartSelect's cross-reference data.",
         "no_match_found": "Not in our verified list - the scraped cross-reference is partial, "
-                          "so phrase as 'not in our verified compatibility list', never a hard 'incompatible'.",
+        "so phrase as 'not in our verified compatibility list', never a hard 'incompatible'.",
         "unknown_model": "We have no data for this model number - it may be mistyped.",
         "unknown_part": "No part with that number in our catalog.",
     }[res.status]
-    return {"data": {"status": res.status, "ps_number": res.ps_number,
-                     "model_number": res.model_number, "evidence": res.evidence,
-                     "honesty_note": honesty, "parts_verified_for_model_sample": sample},
-            "ui_block": {"type": "compat_result", "verdict": res.status,
-                         "part": res.ps_number, "model": res.model_number,
-                         "evidence_count": res.evidence.get("verified_model_count_for_part", 0),
-                         "honesty_note": honesty}}
+    return {
+        "data": {
+            "status": res.status,
+            "ps_number": res.ps_number,
+            "model_number": res.model_number,
+            "evidence": res.evidence,
+            "honesty_note": honesty,
+            "parts_verified_for_model_sample": sample,
+        },
+        "ui_block": {
+            "type": "compat_result",
+            "verdict": res.status,
+            "part": res.ps_number,
+            "model": res.model_number,
+            "evidence_count": res.evidence.get("verified_model_count_for_part", 0),
+            "honesty_note": honesty,
+        },
+    }
 
 
 def diagnose_issue(symptom_description: str, appliance_type: str, brand: str | None = None) -> dict:
@@ -108,20 +152,33 @@ def diagnose_issue(symptom_description: str, appliance_type: str, brand: str | N
         # causes in PartSelect's likelihood order, not just the retrieved chunks.
         top_guide = next((c["guide_id"] for c in chunks if c.get("rank")), None)
         full = retrieval.guide_causes(top_guide) if top_guide is not None else []
-        causes = [{"symptom": c["symptom"], "rank": c["rank"], "cause": c["cause"],
-                   "detail": (c["body"] or "")[:600]} for c in full][:6]
+        causes = [
+            {
+                "symptom": c["symptom"],
+                "rank": c["rank"],
+                "cause": c["cause"],
+                "detail": (c["body"] or "")[:600],
+            }
+            for c in full
+        ][:6]
         if not causes:  # only summary-level guides matched
-            causes = [{"symptom": c["symptom"], "rank": i + 1, "cause": c["symptom"],
-                       "detail": c["document"][:600]} for i, c in enumerate(chunks[:4])]
+            causes = [
+                {"symptom": c["symptom"], "rank": i + 1, "cause": c["symptom"], "detail": c["document"][:600]}
+                for i, c in enumerate(chunks[:4])
+            ]
     q = f"{brand or ''} {appliance_type} {symptom_description}"
     parts = retrieval.hybrid_search(q, appliance_type, k=5)
     if brand:
         branded = [p for p in parts if brand.lower() in p["brand"].lower()]
         parts = branded or parts
-    return {"data": {"causes": causes, "suggested_parts": [_card(p) for p in parts]},
-            "ui_block": {"type": "diagnosis",
-                         "causes": [{"rank": c["rank"], "cause": c["cause"]} for c in causes],
-                         "suggested_parts": [_card(p) for p in parts[:4]]}}
+    return {
+        "data": {"causes": causes, "suggested_parts": [_card(p) for p in parts]},
+        "ui_block": {
+            "type": "diagnosis",
+            "causes": [{"rank": c["rank"], "cause": c["cause"]} for c in causes],
+            "suggested_parts": [_card(p) for p in parts[:4]],
+        },
+    }
 
 
 def get_installation_guide(part_identifier: str) -> dict:
@@ -130,14 +187,27 @@ def get_installation_guide(part_identifier: str) -> dict:
         return {"data": {"found": False, "identifier": part_identifier}, "ui_block": None}
     snippets = retrieval.search_support("how to install replace", part["ps_number"], k=4)
     stories = [s["document"] for s in snippets if s.get("kind") == "story"][:3]
-    data = {"found": True, "ps_number": part["ps_number"], "title": part["title"],
-            "difficulty": part.get("install_difficulty"), "time": part.get("install_time"),
-            "video_url": part.get("video_url"), "product_url": part.get("product_url"),
-            "customer_stories": stories}
-    return {"data": data,
-            "ui_block": {"type": "install_guide", "part": _card(part),
-                         "difficulty": data["difficulty"], "time": data["time"],
-                         "video_url": data["video_url"], "stories": stories}}
+    data = {
+        "found": True,
+        "ps_number": part["ps_number"],
+        "title": part["title"],
+        "difficulty": part.get("install_difficulty"),
+        "time": part.get("install_time"),
+        "video_url": part.get("video_url"),
+        "product_url": part.get("product_url"),
+        "customer_stories": stories,
+    }
+    return {
+        "data": data,
+        "ui_block": {
+            "type": "install_guide",
+            "part": _card(part),
+            "difficulty": data["difficulty"],
+            "time": data["time"],
+            "video_url": data["video_url"],
+            "stories": stories,
+        },
+    }
 
 
 def order_support(action: str, order_id: str | None = None, email: str | None = None) -> dict:
@@ -145,33 +215,63 @@ def order_support(action: str, order_id: str | None = None, email: str | None = 
     In production this body is replaced by an ERP/OMS API call - the input/output
     schema is the contract; nothing else changes."""
     if not order_id:
-        return {"data": {"needs": "order_id",
-                         "note": "Ask the customer for their order number (and the email on the order)."},
-                "ui_block": None}
-    h = int(hashlib.md5(order_id.encode()).hexdigest(), 16)
+        return {
+            "data": {
+                "needs": "order_id",
+                "note": "Ask the customer for their order number (and the email on the order).",
+            },
+            "ui_block": None,
+        }
+    h = int(hashlib.md5(order_id.encode(), usedforsecurity=False).hexdigest(), 16)
     status = ["processing", "shipped", "in transit", "delivered"][h % 4]
     eta = (date(2026, 6, 10) + timedelta(days=h % 5 + 1)).isoformat()
-    data = {"order_id": order_id, "status": status,
-            "eta": None if status == "delivered" else eta,
-            "carrier": ["UPS", "FedEx", "USPS"][h % 3]}
+    data = {
+        "order_id": order_id,
+        "status": status,
+        "eta": None if status == "delivered" else eta,
+        "carrier": ["UPS", "FedEx", "USPS"][h % 3],
+    }
     if action == "return":
         data["return_policy"] = "365-day returns; a prepaid label will be emailed."
         data["return_started"] = True
     if action == "cancel":
         data["cancellable"] = status == "processing"
-    return {"data": data,
-            "ui_block": {"type": "order_status", **data}}
+    return {"data": data, "ui_block": {"type": "order_status", **data}}
 
 
 # ----------------------------------------------------------- registry/schema
 
 TOOLS = {
-    "search_parts": (search_parts, SearchPartsIn, "Search the parts catalog with natural language (hybrid keyword+semantic)."),
-    "get_part_details": (get_part_details, PartDetailsIn, "Exact lookup of one part by PS number / manufacturer number / superseded number."),
-    "check_compatibility": (check_compatibility, CompatibilityIn, "Deterministic check whether a part fits an appliance model (database join, never a guess)."),
-    "diagnose_issue": (diagnose_issue, DiagnoseIn, "Map a symptom description to likely causes (ranked) and candidate parts."),
-    "get_installation_guide": (get_installation_guide, InstallGuideIn, "Installation difficulty, time, video and real customer repair stories for a part."),
-    "order_support": (order_support, OrderSupportIn, "Order status / returns / cancellation (requires order_id)."),
+    "search_parts": (
+        search_parts,
+        SearchPartsIn,
+        "Search the parts catalog with natural language (hybrid keyword+semantic).",
+    ),
+    "get_part_details": (
+        get_part_details,
+        PartDetailsIn,
+        "Exact lookup of one part by PS number / manufacturer number / superseded number.",
+    ),
+    "check_compatibility": (
+        check_compatibility,
+        CompatibilityIn,
+        "Deterministic check whether a part fits an appliance model (database join, never a guess).",
+    ),
+    "diagnose_issue": (
+        diagnose_issue,
+        DiagnoseIn,
+        "Map a symptom description to likely causes (ranked) and candidate parts.",
+    ),
+    "get_installation_guide": (
+        get_installation_guide,
+        InstallGuideIn,
+        "Installation difficulty, time, video and real customer repair stories for a part.",
+    ),
+    "order_support": (
+        order_support,
+        OrderSupportIn,
+        "Order status / returns / cancellation (requires order_id).",
+    ),
 }
 
 FRIENDLY_LABELS = {
@@ -185,10 +285,13 @@ FRIENDLY_LABELS = {
 
 
 def openai_tool_schemas() -> list[dict]:
-    return [{"type": "function",
-             "function": {"name": name, "description": desc,
-                          "parameters": model.model_json_schema()}}
-            for name, (_, model, desc) in TOOLS.items()]
+    return [
+        {
+            "type": "function",
+            "function": {"name": name, "description": desc, "parameters": model.model_json_schema()},
+        }
+        for name, (_, model, desc) in TOOLS.items()
+    ]
 
 
 def run_tool(name: str, arguments: dict) -> dict:
@@ -198,6 +301,7 @@ def run_tool(name: str, arguments: dict) -> dict:
 
 
 # ------------------------------------------------- hallucination validator
+
 
 class HallucinationError(Exception):
     def __init__(self, numbers: set[str]):

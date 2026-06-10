@@ -1,4 +1,5 @@
 """Pretty-print an SSE /chat stream (used by smoke.sh)."""
+
 import json
 import sys
 

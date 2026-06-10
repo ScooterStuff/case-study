@@ -12,3 +12,4 @@ build/
 htmlcov/
 playwright-report/
 test-results/
+scraper/data/

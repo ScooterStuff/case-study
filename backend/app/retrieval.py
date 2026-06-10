@@ -5,6 +5,7 @@ to hallucinate (prices, stock, compatibility) is answered by plain SQL;
 fuzzy natural language (symptoms, descriptions) is answered by vectors.
 Compatibility is a database join, NEVER an LLM guess.
 """
+
 from __future__ import annotations
 
 import json
@@ -16,7 +17,7 @@ import numpy as np
 import psycopg
 from pgvector.psycopg import register_vector
 
-from backend.app.config import settings
+from backend.app import config
 from backend.app.embeddings import embed_one
 
 _conn: psycopg.Connection | None = None
@@ -25,7 +26,7 @@ _conn: psycopg.Connection | None = None
 def get_conn() -> psycopg.Connection:
     global _conn
     if _conn is None or _conn.closed:
-        _conn = psycopg.connect(settings.database_url, autocommit=True)
+        _conn = psycopg.connect(config.settings.database_url, autocommit=True)
         register_vector(_conn)
     return _conn
 
@@ -34,14 +35,16 @@ def norm_number(value: str) -> str:
     return re.sub(r"\s+", "", value).strip().upper().strip("#")
 
 
-PART_COLS = ("ps_number, mpn, brand, title, appliance_type, price, availability, "
-             "description, install_difficulty, install_time, rating, review_count, "
-             "image_url, product_url, video_url")
+PART_COLS = (
+    "ps_number, mpn, brand, title, appliance_type, price, availability, "
+    "description, install_difficulty, install_time, rating, review_count, "
+    "image_url, product_url, video_url"
+)
 
 
 def _part_row(row: tuple) -> dict[str, Any]:
     keys = [c.strip() for c in PART_COLS.split(",")]
-    d = dict(zip(keys, row))
+    d = dict(zip(keys, row, strict=True))
     if d.get("price") is not None:
         d["price"] = float(d["price"])
     return d
@@ -49,35 +52,42 @@ def _part_row(row: tuple) -> dict[str, Any]:
 
 # ------------------------------------------------------------------ exact facts
 
+
 def get_part(ps_or_mpn: str) -> dict | None:
     """Exact lookup by PS number, MPN, or superseded (replaced) MPN."""
     key = norm_number(ps_or_mpn)
     conn = get_conn()
     row = conn.execute(
-        f"SELECT {PART_COLS} FROM parts WHERE ps_number = %s OR upper(mpn) = %s",
-        (key, key)).fetchone()
+        f"SELECT {PART_COLS} FROM parts WHERE ps_number = %s OR upper(mpn) = %s", (key, key)
+    ).fetchone()
     if row is None:
         qualified = ", ".join("p." + c.strip() for c in PART_COLS.split(","))
         row = conn.execute(
             f"""SELECT {qualified} FROM parts p
                 JOIN part_replaces r ON r.ps_number = p.ps_number
-                WHERE upper(r.old_mpn) = %s LIMIT 1""", (key,)).fetchone()
+                WHERE upper(r.old_mpn) = %s LIMIT 1""",
+            (key,),
+        ).fetchone()
         if row is None:
             return None
         part = _part_row(row)
         part["matched_via"] = f"replaces {key}"
         return part
     part = _part_row(row)
-    part["symptoms"] = [r[0] for r in conn.execute(
-        "SELECT symptom FROM part_symptoms WHERE ps_number = %s", (part["ps_number"],))]
-    part["replaces"] = [r[0] for r in conn.execute(
-        "SELECT old_mpn FROM part_replaces WHERE ps_number = %s", (part["ps_number"],))]
+    part["symptoms"] = [
+        r[0]
+        for r in conn.execute("SELECT symptom FROM part_symptoms WHERE ps_number = %s", (part["ps_number"],))
+    ]
+    part["replaces"] = [
+        r[0]
+        for r in conn.execute("SELECT old_mpn FROM part_replaces WHERE ps_number = %s", (part["ps_number"],))
+    ]
     return part
 
 
 @dataclass
 class CompatResult:
-    status: str                       # verified_fit | no_match_found | unknown_model | unknown_part
+    status: str  # verified_fit | no_match_found | unknown_model | unknown_part
     ps_number: str
     model_number: str
     evidence: dict = field(default_factory=dict)
@@ -97,14 +107,19 @@ def check_compat(ps_number: str, model: str) -> CompatResult:
     ps = part["ps_number"]
 
     hit = conn.execute(
-        "SELECT source, model_desc FROM compatibility WHERE ps_number = %s AND model_number = %s",
-        (ps, model)).fetchone()
+        "SELECT source, model_desc FROM compatibility WHERE ps_number = %s AND model_number = %s", (ps, model)
+    ).fetchone()
     total = conn.execute("SELECT count(*) FROM compatibility WHERE ps_number = %s", (ps,)).fetchone()[0]
     model_known = conn.execute(
-        "SELECT count(*) FROM compatibility WHERE model_number = %s", (model,)).fetchone()[0]
+        "SELECT count(*) FROM compatibility WHERE model_number = %s", (model,)
+    ).fetchone()[0]
 
-    evidence = {"verified_model_count_for_part": total, "model_seen_in_data": bool(model_known),
-                "part_title": part["title"], "part_appliance": part["appliance_type"]}
+    evidence = {
+        "verified_model_count_for_part": total,
+        "model_seen_in_data": bool(model_known),
+        "part_title": part["title"],
+        "part_appliance": part["appliance_type"],
+    }
     if hit:
         evidence.update(source=hit[0], model_desc=hit[1])
         return CompatResult("verified_fit", ps, model, evidence)
@@ -117,7 +132,7 @@ def check_compat(ps_number: str, model: str) -> CompatResult:
 def parts_for_model(model: str, symptom: str | None = None, limit: int = 10) -> list[dict]:
     model = norm_number(model)
     conn = get_conn()
-    sql = f"""SELECT DISTINCT {', '.join('p.' + c.strip() for c in PART_COLS.split(','))}
+    sql = f"""SELECT DISTINCT {", ".join("p." + c.strip() for c in PART_COLS.split(","))}
               FROM parts p JOIN compatibility c ON c.ps_number = p.ps_number
               WHERE c.model_number = %s"""
     params: list = [model]
@@ -131,6 +146,7 @@ def parts_for_model(model: str, symptom: str | None = None, limit: int = 10) -> 
 
 
 # --------------------------------------------------------------------- search
+
 
 def keyword_search(q: str, appliance: str | None = None, limit: int = 8) -> list[dict]:
     conn = get_conn()
@@ -185,7 +201,8 @@ def search_repairs(symptom_text: str, appliance: str, k: int = 6) -> list[dict]:
            FROM embeddings
            WHERE collection = 'repair_chunks' AND metadata->>'appliance' = %s
            ORDER BY embedding <=> %s LIMIT %s""",
-        (vec, appliance, vec, k)).fetchall()
+        (vec, appliance, vec, k),
+    ).fetchall()
     out = []
     for doc, meta, sim in rows:
         meta = meta if isinstance(meta, dict) else json.loads(meta)
@@ -198,9 +215,14 @@ def guide_causes(guide_id: int) -> list[dict]:
     rows = conn.execute(
         """SELECT g.symptom, g.appliance, g.url, c.rank, c.cause, c.body
            FROM repair_guides g LEFT JOIN repair_causes c ON c.guide_id = g.id
-           WHERE g.id = %s ORDER BY c.rank""", (guide_id,)).fetchall()
-    return [{"symptom": r[0], "appliance": r[1], "url": r[2],
-             "rank": r[3], "cause": r[4], "body": r[5]} for r in rows if r[3] is not None]
+           WHERE g.id = %s ORDER BY c.rank""",
+        (guide_id,),
+    ).fetchall()
+    return [
+        {"symptom": r[0], "appliance": r[1], "url": r[2], "rank": r[3], "cause": r[4], "body": r[5]}
+        for r in rows
+        if r[3] is not None
+    ]
 
 
 def search_support(q: str, ps_number: str | None = None, k: int = 4) -> list[dict]:

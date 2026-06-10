@@ -1,4 +1,5 @@
 """Root-level tests reuse the backend DB fixtures (pgserver + mock ingest)."""
+
 import sys
 from pathlib import Path
 

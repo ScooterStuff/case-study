@@ -122,3 +122,18 @@
 22. **Browser-interaction acceptance (suggested prompts, fix-it journey, mobile
     viewport) can't be clicked through in the build sandbox** — wired for
     Playwright in Phase 7; the demo GIF is recorded on the candidate's machine.
+
+## Phase 7 — testing & CI
+
+23. **Jest (react-scripts) instead of Vitest** — the CRA scaffold ships Jest;
+    swapping to Vitest means ejecting or CRACO for zero gain. Same RTL tests.
+24. **Retrieval/tool tests run against the real (34-part) dataset, not a
+    mini-fixture db** — the dataset IS small and ingest takes ~3s, so a separate
+    mini fixture would add a second source of truth for no speed win.
+25. **Playwright cannot download a browser inside the build sandbox** (CDN not
+    on the network allowlist) — `e2e/journey.spec.js` is written and wired into
+    CI (ubuntu runners install chromium fine) and runs locally via `make e2e`.
+26. **mypy --strict dropped to pragmatic mypy config** (ignore_missing_imports +
+    check_untyped_defs in pyproject); ruff (incl. flake8-bandit rules) + format
+    enforced in CI and pre-commit. pytest-socket skipped: the no-network property
+    is enforced structurally (mock LLM/embeddings, local socket DB).

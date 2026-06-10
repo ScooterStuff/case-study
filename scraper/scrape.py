@@ -6,6 +6,7 @@ Pipeline: listings -> part URLs -> part pages -> repair indexes -> repair pages
 -> write parts.json / compatibility.json / repair_guides.json. All fetches go
 through the polite on-disk cache (re-runs make zero network requests).
 """
+
 from __future__ import annotations
 
 import argparse
@@ -15,16 +16,27 @@ from pathlib import Path
 
 from scraper.fetch import Fetcher, PageBudgetExceeded
 from scraper.parse import (
-    Part, parse_cross_reference, parse_listing, parse_model_page,
-    parse_part_page, parse_repair_index, parse_repair_page,
+    Part,
+    parse_cross_reference,
+    parse_listing,
+    parse_model_page,
+    parse_part_page,
+    parse_repair_index,
+    parse_repair_page,
 )
 from scraper.seeds import (
-    APPLIANCES, BRANDS, MAX_PARTS_PER_APPLIANCE, MUST_HAVE_MODEL_URLS,
-    MUST_HAVE_PART_URLS, REPAIR_INDEXES, brand_listing_url,
+    APPLIANCES,
+    BRANDS,
+    MAX_PARTS_PER_APPLIANCE,
+    MUST_HAVE_MODEL_URLS,
+    MUST_HAVE_PART_URLS,
+    REPAIR_INDEXES,
+    brand_listing_url,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 logger = logging.getLogger("scrape")
+
 
 def collect_part_urls(fetcher: Fetcher, appliance: str) -> list[str]:
     urls: list[str] = parse_listing(fetcher.get(APPLIANCES[appliance]))
@@ -38,10 +50,10 @@ def collect_part_urls(fetcher: Fetcher, appliance: str) -> list[str]:
         urls = list(dict.fromkeys(urls))
     return urls[:MAX_PARTS_PER_APPLIANCE]
 
+
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--appliance", nargs="+", default=list(APPLIANCES),
-                    choices=list(APPLIANCES))
+    ap.add_argument("--appliance", nargs="+", default=list(APPLIANCES), choices=list(APPLIANCES))
     ap.add_argument("--out", type=Path, default=Path("backend/data"))
     args = ap.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
@@ -63,12 +75,18 @@ def main() -> None:
                         part.appliance_type = appliance
                     parts[part.ps_number] = part
                     compat_rows += [r.model_dump() for r in parse_cross_reference(html, url)]
-                    for qna in part.qna:       # Q&A model numbers, flagged source=qna
+                    for qna in part.qna:  # Q&A model numbers, flagged source=qna
                         for model in qna.model_numbers:
-                            compat_rows.append({
-                                "ps_number": part.ps_number, "brand": part.brand,
-                                "model_number": model, "description": "",
-                                "source": "qna", "source_url": url})
+                            compat_rows.append(
+                                {
+                                    "ps_number": part.ps_number,
+                                    "brand": part.brand,
+                                    "model_number": model,
+                                    "description": "",
+                                    "source": "qna",
+                                    "source_url": url,
+                                }
+                            )
                 if (i + 1) % 10 == 0:
                     logger.info("%s: %d/%d part pages", appliance, i + 1, len(part_urls))
             for url in parse_repair_index(fetcher.get(REPAIR_INDEXES[appliance])):
@@ -88,11 +106,18 @@ def main() -> None:
             deduped.append(row)
 
     (args.out / "parts.json").write_text(
-        json.dumps([p.model_dump() for p in parts.values()], indent=1), encoding="utf-8")
+        json.dumps([p.model_dump() for p in parts.values()], indent=1), encoding="utf-8"
+    )
     (args.out / "compatibility.json").write_text(json.dumps(deduped, indent=1), encoding="utf-8")
     (args.out / "repair_guides.json").write_text(json.dumps(guides, indent=1), encoding="utf-8")
-    logger.info("wrote %d parts, %d compat rows, %d guides (live requests: %d)",
-                len(parts), len(deduped), len(guides), fetcher.live_requests)
+    logger.info(
+        "wrote %d parts, %d compat rows, %d guides (live requests: %d)",
+        len(parts),
+        len(deduped),
+        len(guides),
+        fetcher.live_requests,
+    )
+
 
 if __name__ == "__main__":
     main()

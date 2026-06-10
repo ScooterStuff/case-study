@@ -8,6 +8,7 @@ Modes:
 
 Default: --load-seed if backend/data/seed.sql.gz exists, else --rebuild.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -25,7 +26,7 @@ from pgvector.psycopg import register_vector
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from backend.app.config import settings  # noqa: E402
+from backend.app import config  # noqa: E402
 from backend.app.embeddings import embed_batch  # noqa: E402
 
 logger = logging.getLogger("ingest")
@@ -120,7 +121,7 @@ def rebuild(conn: psycopg.Connection) -> None:
     compat = load_json("compatibility.json")
     guides = load_json("repair_guides.json")
 
-    conn.execute(SCHEMA % {"dims": settings.embedding_dims})
+    conn.execute(SCHEMA % {"dims": config.settings.embedding_dims})
     register_vector(conn)  # NOTE: must precede cursor creation (cursors snapshot adapters)
 
     with conn.cursor() as cur:
@@ -132,17 +133,33 @@ def rebuild(conn: psycopg.Connection) -> None:
                      price, availability, description, install_difficulty, install_time,
                      rating, review_count, image_url, product_url, video_url)
                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-                (p["ps_number"], p["mpn"], p["brand"], p["title"], p["appliance_type"],
-                 p.get("price"), p.get("availability"), p.get("description"),
-                 p.get("install_difficulty") or (difficulties.most_common(1)[0][0] if difficulties else None),
-                 p.get("install_time"),
-                 p.get("rating"), p.get("review_count"),
-                 (p.get("images") or [None])[0], p["source_url"],
-                 (p.get("videos") or [{}])[0].get("url")))
-            cur.executemany("INSERT INTO part_symptoms VALUES (%s,%s)",
-                            [(p["ps_number"], s) for s in p.get("symptoms", [])])
-            cur.executemany("INSERT INTO part_replaces VALUES (%s,%s)",
-                            [(p["ps_number"], m) for m in p.get("replaces", [])])
+                (
+                    p["ps_number"],
+                    p["mpn"],
+                    p["brand"],
+                    p["title"],
+                    p["appliance_type"],
+                    p.get("price"),
+                    p.get("availability"),
+                    p.get("description"),
+                    p.get("install_difficulty")
+                    or (difficulties.most_common(1)[0][0] if difficulties else None),
+                    p.get("install_time"),
+                    p.get("rating"),
+                    p.get("review_count"),
+                    (p.get("images") or [None])[0],
+                    p["source_url"],
+                    (p.get("videos") or [{}])[0].get("url"),
+                ),
+            )
+            cur.executemany(
+                "INSERT INTO part_symptoms VALUES (%s,%s)",
+                [(p["ps_number"], s) for s in p.get("symptoms", [])],
+            )
+            cur.executemany(
+                "INSERT INTO part_replaces VALUES (%s,%s)",
+                [(p["ps_number"], m) for m in p.get("replaces", [])],
+            )
 
         known = {p["ps_number"] for p in parts}
         skipped = 0
@@ -153,59 +170,113 @@ def rebuild(conn: psycopg.Connection) -> None:
             cur.execute(
                 """INSERT INTO compatibility VALUES (%s,%s,%s,%s,%s)
                    ON CONFLICT DO NOTHING""",
-                (row["ps_number"], row.get("brand"), row["model_number"],
-                 row.get("description"), row.get("source", "cross_ref")))
+                (
+                    row["ps_number"],
+                    row.get("brand"),
+                    row["model_number"],
+                    row.get("description"),
+                    row.get("source", "cross_ref"),
+                ),
+            )
 
-        docs: list[tuple[str, str, dict]] = []   # (collection, document, metadata)
+        docs: list[tuple[str, str, dict]] = []  # (collection, document, metadata)
         for g in guides:
-            cur.execute("INSERT INTO repair_guides (appliance, symptom, url) VALUES (%s,%s,%s) RETURNING id",
-                        (g["appliance"], g["symptom"], g.get("source_url")))
+            cur.execute(
+                "INSERT INTO repair_guides (appliance, symptom, url) VALUES (%s,%s,%s) RETURNING id",
+                (g["appliance"], g["symptom"], g.get("source_url")),
+            )
             gid = cur.fetchone()[0]
             for c in g.get("causes", []):
-                cur.execute("INSERT INTO repair_causes VALUES (%s,%s,%s,%s,%s)",
-                            (gid, c["rank"], c["name"], c["text"], ", ".join(c.get("part_links", []))))
+                cur.execute(
+                    "INSERT INTO repair_causes VALUES (%s,%s,%s,%s,%s)",
+                    (gid, c["rank"], c["name"], c["text"], ", ".join(c.get("part_links", []))),
+                )
                 body = c["text"]
                 chunks = [body] if len(body) <= 1200 else _split(body)
                 for chunk in chunks:
-                    docs.append(("repair_chunks",
-                                 f"{g['appliance']} — {g['symptom']} — cause {c['rank']}: {c['name']}\n{chunk}",
-                                 {"appliance": g["appliance"], "symptom": g["symptom"],
-                                  "rank": c["rank"], "guide_id": gid, "cause": c["name"]}))
+                    docs.append(
+                        (
+                            "repair_chunks",
+                            f"{g['appliance']} — {g['symptom']} — cause {c['rank']}: {c['name']}\n{chunk}",
+                            {
+                                "appliance": g["appliance"],
+                                "symptom": g["symptom"],
+                                "rank": c["rank"],
+                                "guide_id": gid,
+                                "cause": c["name"],
+                            },
+                        )
+                    )
             if not g.get("causes"):
-                docs.append(("repair_chunks",
-                             f"{g['appliance']} — {g['symptom']} (summary)\n{g.get('intro','')}",
-                             {"appliance": g["appliance"], "symptom": g["symptom"],
-                              "rank": 0, "guide_id": gid, "cause": "summary"}))
+                docs.append(
+                    (
+                        "repair_chunks",
+                        f"{g['appliance']} — {g['symptom']} (summary)\n{g.get('intro', '')}",
+                        {
+                            "appliance": g["appliance"],
+                            "symptom": g["symptom"],
+                            "rank": 0,
+                            "guide_id": gid,
+                            "cause": "summary",
+                        },
+                    )
+                )
 
         for p in parts:
-            doc = (f"{p['title']} ({p['ps_number']} / {p['mpn']}) by {p['brand']}. "
-                   f"Fixes: {', '.join(p.get('symptoms', []))}. {(p.get('description') or '')[:1500]}")
-            docs.append(("part_docs", doc,
-                         {"ps_number": p["ps_number"], "appliance_type": p["appliance_type"],
-                          "brand": p["brand"]}))
+            doc = (
+                f"{p['title']} ({p['ps_number']} / {p['mpn']}) by {p['brand']}. "
+                f"Fixes: {', '.join(p.get('symptoms', []))}. {(p.get('description') or '')[:1500]}"
+            )
+            docs.append(
+                (
+                    "part_docs",
+                    doc,
+                    {"ps_number": p["ps_number"], "appliance_type": p["appliance_type"], "brand": p["brand"]},
+                )
+            )
             for q in p.get("qna", []):
                 if q.get("question"):
-                    docs.append(("support_snippets", f"Q: {q['question']}\nA: {q.get('answer','')}",
-                                 {"ps_number": p["ps_number"], "kind": "qna"}))
+                    docs.append(
+                        (
+                            "support_snippets",
+                            f"Q: {q['question']}\nA: {q.get('answer', '')}",
+                            {"ps_number": p["ps_number"], "kind": "qna"},
+                        )
+                    )
             for s in p.get("repair_stories", [])[:5]:
                 if s.get("text"):
-                    docs.append(("support_snippets", s["text"][:1500],
-                                 {"ps_number": p["ps_number"], "kind": "story"}))
+                    docs.append(
+                        ("support_snippets", s["text"][:1500], {"ps_number": p["ps_number"], "kind": "story"})
+                    )
 
         texts = [d[1] for d in docs]
         n_tokens = sum(len(t) for t in texts) / 4
-        logger.info("embedding %d docs (~%dk tokens, est cost $%.4f)%s",
-                    len(docs), n_tokens / 1000, n_tokens / 1e6 * 0.02,
-                    " [MOCK]" if settings.mock_embeddings else "")
+        logger.info(
+            "embedding %d docs (~%dk tokens, est cost $%.4f)%s",
+            len(docs),
+            n_tokens / 1000,
+            n_tokens / 1e6 * 0.02,
+            " [MOCK]" if config.settings.mock_embeddings else "",
+        )
         vectors = embed_batch(texts)
         import numpy as np
-        for (collection, document, metadata), vec in zip(docs, vectors):
-            cur.execute("INSERT INTO embeddings (collection, document, metadata, embedding) VALUES (%s,%s,%s,%s)",
-                        (collection, document, json.dumps(metadata), np.array(vec)))
+
+        for (collection, document, metadata), vec in zip(docs, vectors, strict=True):
+            cur.execute(
+                "INSERT INTO embeddings (collection, document, metadata, embedding) VALUES (%s,%s,%s,%s)",
+                (collection, document, json.dumps(metadata), np.array(vec)),
+            )
 
     conn.commit()
-    for table in ("parts", "part_symptoms", "part_replaces", "compatibility",
-                  "repair_guides", "repair_causes", "embeddings"):
+    for table in (
+        "parts",
+        "part_symptoms",
+        "part_replaces",
+        "compatibility",
+        "repair_guides",
+        "repair_causes",
+        "embeddings",
+    ):
         n = conn.execute(f"SELECT count(*) FROM {table}").fetchone()[0]  # noqa: S608
         logger.info("%-15s %d rows", table, n)
     if skipped:
@@ -223,7 +294,7 @@ def _split(body: str, limit: int = 1200, overlap: int = 100) -> list[str]:
             cur = (cur + "\n\n" + para).strip()
     while len(cur) > limit:
         chunks.append(cur[:limit])
-        cur = cur[limit - overlap:]
+        cur = cur[limit - overlap :]
     if cur:
         chunks.append(cur)
     return chunks
@@ -244,14 +315,17 @@ def dump_seed(seed: Path) -> None:
     if not pg_dump:
         try:
             import pgserver
+
             pg_dump = str(Path(pgserver.__file__).parent / "pginstall" / "bin" / "pg_dump")
         except ImportError:
             pass
     if not pg_dump or not Path(pg_dump).exists():
         raise SystemExit("pg_dump not found - run inside an environment with postgres client tools")
     out = subprocess.run(  # noqa: S603
-        [pg_dump, "--no-owner", "--clean", "--if-exists", settings.database_url],
-        capture_output=True, check=True)
+        [pg_dump, "--no-owner", "--clean", "--if-exists", config.settings.database_url],
+        capture_output=True,
+        check=True,
+    )
     seed.write_bytes(gzip.compress(out.stdout, 6))
     logger.info("wrote %s (%d KB)", seed, seed.stat().st_size // 1024)
 
@@ -268,7 +342,7 @@ def main() -> None:
     if args.dump_seed:
         dump_seed(seed)
         return
-    with psycopg.connect(settings.database_url, autocommit=False) as conn:
+    with psycopg.connect(config.settings.database_url, autocommit=False) as conn:
         if args.load_seed or (not args.rebuild and seed.exists()):
             load_seed(conn, seed)
         else:

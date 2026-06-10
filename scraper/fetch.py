@@ -3,6 +3,7 @@
 Every fetched page is cached on disk; a URL is never fetched twice across
 runs. Live requests are throttled and hard-capped (CONTEXT.md §8).
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -18,24 +19,29 @@ logger = logging.getLogger(__name__)
 
 CACHE_DIR = Path(__file__).parent / "data" / "raw_html"
 
+
 class PageBudgetExceeded(RuntimeError):
     """Raised when the global MAX_PAGES crawl budget is exhausted."""
 
+
 class Fetcher:
-    def __init__(self, cache_dir: Path = CACHE_DIR, delay: float = REQUEST_DELAY_SECONDS,
-                 max_pages: int = MAX_PAGES) -> None:
+    def __init__(
+        self, cache_dir: Path = CACHE_DIR, delay: float = REQUEST_DELAY_SECONDS, max_pages: int = MAX_PAGES
+    ) -> None:
         self.cache_dir = cache_dir
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.delay = delay
         self.max_pages = max_pages
         self.live_requests = 0
         self._client = httpx.Client(
-            headers={"User-Agent": USER_AGENT}, follow_redirects=True, timeout=30,
+            headers={"User-Agent": USER_AGENT},
+            follow_redirects=True,
+            timeout=30,
             trust_env=False,  # NOTE: ignore env proxies; sandbox sets a SOCKS proxy httpx cannot use
         )
 
     def _cache_path(self, url: str) -> Path:
-        return self.cache_dir / f"{hashlib.sha1(url.encode()).hexdigest()}.html"
+        return self.cache_dir / f"{hashlib.sha1(url.encode(), usedforsecurity=False).hexdigest()}.html"
 
     def get(self, url: str) -> str:
         """Return page HTML, from cache when available (zero network on re-run)."""

@@ -4,6 +4,7 @@ Selectors follow playbook/01_data_scraping.md, verified against saved real
 pages (scraper/fixtures/). Each parser takes raw HTML and returns pydantic
 models - no I/O here, which keeps everything unit-testable.
 """
+
 from __future__ import annotations
 
 import re
@@ -17,6 +18,7 @@ from scraper.seeds import BASE_URL
 
 # --------------------------------------------------------------------------- models
 
+
 class RepairStory(BaseModel):
     title: str = ""
     text: str
@@ -26,20 +28,22 @@ class RepairStory(BaseModel):
     tools: str = ""
     helpful_votes: int = 0
 
+
 class QnA(BaseModel):
     question: str
     answer: str = ""
     model_numbers: list[str] = Field(default_factory=list)
 
+
 class Part(BaseModel):
-    ps_number: str                      # normalized, e.g. "PS3406971"
-    mpn: str                            # manufacturer part number, e.g. "W10195416"
+    ps_number: str  # normalized, e.g. "PS3406971"
+    mpn: str  # manufacturer part number, e.g. "W10195416"
     brand: str = ""
     title: str = ""
     price: float | None = None
     availability: str = ""
     description: str = ""
-    appliance_type: str = ""            # "dishwasher" | "refrigerator"
+    appliance_type: str = ""  # "dishwasher" | "refrigerator"
     symptoms: list[str] = Field(default_factory=list)
     works_with: list[str] = Field(default_factory=list)
     replaces: list[str] = Field(default_factory=list)
@@ -55,19 +59,22 @@ class Part(BaseModel):
     source_url: str = ""
     scraped_at: str = ""
 
+
 class CompatibilityRow(BaseModel):
     ps_number: str
     brand: str = ""
-    model_number: str                   # normalized (uppercase, stripped)
+    model_number: str  # normalized (uppercase, stripped)
     description: str = ""
-    source: str = "crossref"            # crossref | qna | model_page
+    source: str = "crossref"  # crossref | qna | model_page
     source_url: str = ""
 
+
 class RepairCause(BaseModel):
-    rank: int                           # PartSelect orders causes by likelihood
+    rank: int  # PartSelect orders causes by likelihood
     name: str
     text: str
     part_links: list[str] = Field(default_factory=list)
+
 
 class RepairGuide(BaseModel):
     appliance: str
@@ -79,25 +86,30 @@ class RepairGuide(BaseModel):
     repair_story_count: int | None = None
     video_count: int | None = None
     causes: list[RepairCause] = Field(default_factory=list)
-    detail_level: str = "full"          # full | summary (see DEVIATIONS.md)
+    detail_level: str = "full"  # full | summary (see DEVIATIONS.md)
     source_url: str = ""
     scraped_at: str = ""
+
 
 # ----------------------------------------------------------------- normalization
 
 PS_RE = re.compile(r"PS\d{5,9}")
 MODEL_IN_TEXT_RE = re.compile(r"[Ff]or model number[:\s#]*([A-Za-z0-9][A-Za-z0-9\-/#]{3,})")
 
+
 def now_iso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
 
 def norm_number(value: str) -> str:
     """Normalize part/model numbers for matching: uppercase, strip separators."""
     return re.sub(r"\s+", "", value).strip().upper().strip("#")
 
+
 def parse_price(value: str) -> float | None:
     m = re.search(r"([0-9][0-9,]*\.?[0-9]*)", value.replace("$", ""))
     return float(m.group(1).replace(",", "")) if m else None
+
 
 def _txt(node: Tag | None) -> str:
     if node is None:
@@ -106,6 +118,7 @@ def _txt(node: Tag | None) -> str:
         return (node.get("content") or "").strip()
     return node.get_text(" ", strip=True)
 
+
 def _itemprop(soup: BeautifulSoup, name: str) -> str:
     node = soup.select_one(f'[itemprop="{name}"]')
     if node is None:
@@ -113,20 +126,24 @@ def _itemprop(soup: BeautifulSoup, name: str) -> str:
     content = node.get("content")
     return content.strip() if content else _txt(node)
 
+
 def _section(soup: BeautifulSoup, anchor_id: str) -> Tag | None:
     """Content sections are anchored by element id; content sits in the parent."""
     anchor = soup.find(id=anchor_id)
     return anchor.parent if anchor is not None else None
 
+
 # ------------------------------------------------------------------- part pages
+
 
 def parse_part_page(html: str, source_url: str = "") -> Part:
     soup = BeautifulSoup(html, "lxml")
 
     ps_number = norm_number(_itemprop(soup, "productID"))
     mpn = norm_number(_itemprop(soup, "mpn"))
-    brand_node = soup.select_one('[itemprop="brand"] [itemprop="name"]') or \
-        soup.select_one('[itemprop="brand"]')
+    brand_node = soup.select_one('[itemprop="brand"] [itemprop="name"]') or soup.select_one(
+        '[itemprop="brand"]'
+    )
     brand = _txt(brand_node)
 
     title = _itemprop(soup, "name")
@@ -137,7 +154,7 @@ def parse_part_page(html: str, source_url: str = "") -> Part:
         description = _txt(_section(soup, "ProductDescription"))
 
     rating = None
-    if (raw := _itemprop(soup, "ratingValue")):
+    if raw := _itemprop(soup, "ratingValue"):
         try:
             rating = float(raw)
         except ValueError:
@@ -150,24 +167,37 @@ def parse_part_page(html: str, source_url: str = "") -> Part:
     appliance_type = _infer_appliance(works_with, title, source_url)
 
     part = Part(
-        ps_number=ps_number, mpn=mpn, brand=brand, title=title, price=price,
-        availability=availability, description=description,
-        appliance_type=appliance_type, symptoms=symptoms, works_with=works_with,
-        replaces=replaces, rating=rating, review_count=review_count,
-        images=_parse_images(soup), videos=_parse_videos(_section(soup, "PartVideos")),
+        ps_number=ps_number,
+        mpn=mpn,
+        brand=brand,
+        title=title,
+        price=price,
+        availability=availability,
+        description=description,
+        appliance_type=appliance_type,
+        symptoms=symptoms,
+        works_with=works_with,
+        replaces=replaces,
+        rating=rating,
+        review_count=review_count,
+        images=_parse_images(soup),
+        videos=_parse_videos(_section(soup, "PartVideos")),
         repair_stories=_parse_stories(_section(soup, "InstallationInstructions")),
         qna=_parse_qna(_section(soup, "QuestionsAndAnswers")),
         related_parts=_parse_related(_section(soup, "RelatedParts")),
-        source_url=source_url, scraped_at=now_iso(),
+        source_url=source_url,
+        scraped_at=now_iso(),
     )
     return part
 
+
 def _availability(raw: str) -> str:
     raw = raw.strip()
-    if "/" in raw:                      # schema.org URL form
+    if "/" in raw:  # schema.org URL form
         raw = raw.rsplit("/", 1)[-1]
     mapping = {"InStock": "In Stock", "OutOfStock": "Out of Stock"}
     return mapping.get(raw, raw)
+
 
 def _infer_appliance(works_with: list[str], title: str, url: str) -> str:
     haystack = " ".join(works_with + [title, url]).lower()
@@ -175,6 +205,7 @@ def _infer_appliance(works_with: list[str], title: str, url: str) -> str:
         if kind in haystack:
             return kind
     return ""
+
 
 def _parse_troubleshooting(section: Tag | None) -> tuple[list[str], list[str], list[str]]:
     if section is None:
@@ -185,7 +216,7 @@ def _parse_troubleshooting(section: Tag | None) -> tuple[list[str], list[str], l
         idx = text.lower().find(marker.lower())
         if idx == -1:
             return ""
-        rest = text[idx + len(marker):]
+        rest = text[idx + len(marker) :]
         for stop in ("This part works with", "replaces these", "Back to Top"):
             cut = rest.lower().find(stop.lower())
             if cut > 0:
@@ -200,6 +231,7 @@ def _parse_troubleshooting(section: Tag | None) -> tuple[list[str], list[str], l
         replaces = [norm_number(x) for x in repl_m.group(1).split(",") if x.strip()]
     return symptoms, works, replaces
 
+
 def _parse_images(soup: BeautifulSoup) -> list[str]:
     urls: list[str] = []
     for node in soup.select('[itemprop="image"]'):
@@ -210,6 +242,7 @@ def _parse_images(soup: BeautifulSoup) -> list[str]:
         urls.append(img["src"])
     return list(dict.fromkeys(urls))
 
+
 def _parse_videos(section: Tag | None) -> list[dict]:
     if section is None:
         return []
@@ -219,11 +252,17 @@ def _parse_videos(section: Tag | None) -> list[dict]:
         if "youtube" in url or "youtu.be" in url:
             videos.append({"url": url, "title": _txt(node) or node.get("title", "")})
     for node in section.find_all(attrs={"data-yt-init": True}):
-        videos.append({"url": f"https://www.youtube.com/watch?v={node['data-yt-init']}",
-                       "title": node.get("title", "")})
+        videos.append(
+            {"url": f"https://www.youtube.com/watch?v={node['data-yt-init']}", "title": node.get("title", "")}
+        )
     return list({v["url"]: v for v in videos}.values())
 
-_LABEL_RE = re.compile(r"Difficulty Level:\s*(?P<difficulty>.+?)\s*Total Repair Time:\s*(?P<time>.+?)(?:\s*Tools:\s*(?P<tools>.+?))?$", re.S)
+
+_LABEL_RE = re.compile(
+    r"Difficulty Level:\s*(?P<difficulty>.+?)\s*Total Repair Time:\s*(?P<time>.+?)(?:\s*Tools:\s*(?P<tools>.+?))?$",
+    re.S,
+)
+
 
 def _parse_stories(section: Tag | None, limit: int = 5) -> list[RepairStory]:
     if section is None:
@@ -231,7 +270,7 @@ def _parse_stories(section: Tag | None, limit: int = 5) -> list[RepairStory]:
     stories: list[RepairStory] = []
     for label in section.find_all(string=re.compile(r"Difficulty Level:")):
         container = label.find_parent("div")
-        for _ in range(4):              # walk up to the story card container
+        for _ in range(4):  # walk up to the story card container
             if container is None:
                 break
             text = container.get_text("\n", strip=True)
@@ -259,6 +298,7 @@ def _parse_stories(section: Tag | None, limit: int = 5) -> list[RepairStory]:
             break
     return stories
 
+
 def _parse_qna(section: Tag | None, limit: int = 5) -> list[QnA]:
     if section is None:
         return []
@@ -267,14 +307,17 @@ def _parse_qna(section: Tag | None, limit: int = 5) -> list[QnA]:
         text = q_div.get_text("\n", strip=True)
         answer = _txt(q_div.select_one(".qna__ps-answer__msg"))
         question = text.split(answer)[0] if answer and answer in text else text
-        items.append(QnA(
-            question=question[:1500],
-            answer=answer[:1500],
-            model_numbers=[norm_number(m) for m in MODEL_IN_TEXT_RE.findall(text)],
-        ))
+        items.append(
+            QnA(
+                question=question[:1500],
+                answer=answer[:1500],
+                model_numbers=[norm_number(m) for m in MODEL_IN_TEXT_RE.findall(text)],
+            )
+        )
         if len(items) >= limit:
             break
     return items
+
 
 def _parse_related(section: Tag | None) -> list[str]:
     if section is None:
@@ -285,6 +328,7 @@ def _parse_related(section: Tag | None) -> list[str]:
         if m:
             found.append(m.group(0))
     return list(dict.fromkeys(found))
+
 
 def parse_cross_reference(html: str, source_url: str = "") -> list[CompatibilityRow]:
     """#ModelCrossReference rows. The static HTML only contains the first page
@@ -298,23 +342,32 @@ def parse_cross_reference(html: str, source_url: str = "") -> list[Compatibility
     for tr in section.find_all("tr"):
         cells = [_txt(td) for td in tr.find_all(["td", "th"])]
         if len(cells) >= 3 and cells[1].lower() != "model number":
-            rows.append(CompatibilityRow(
-                ps_number=ps_number, brand=cells[0],
-                model_number=norm_number(cells[1]), description=cells[2],
-                source="crossref", source_url=source_url,
-            ))
+            rows.append(
+                CompatibilityRow(
+                    ps_number=ps_number,
+                    brand=cells[0],
+                    model_number=norm_number(cells[1]),
+                    description=cells[2],
+                    source="crossref",
+                    source_url=source_url,
+                )
+            )
     if rows:
         return rows
     # fallback: the "table" is a div grid: Brand / linked model / description triplets
     for a in section.find_all("a", href=re.compile(r"/Models/")):
         model = norm_number(a.get_text(strip=True))
         brand = _txt(a.find_previous(string=True))
-        rows.append(CompatibilityRow(ps_number=ps_number, brand=brand,
-                                     model_number=model, source="crossref",
-                                     source_url=source_url))
+        rows.append(
+            CompatibilityRow(
+                ps_number=ps_number, brand=brand, model_number=model, source="crossref", source_url=source_url
+            )
+        )
     return rows
 
+
 # ------------------------------------------------------------------ listing pages
+
 
 def parse_listing(html: str) -> list[str]:
     """Part detail URLs from a category/brand listing page (div.nf__part cards)."""
@@ -327,7 +380,9 @@ def parse_listing(html: str) -> list[str]:
             urls.append(href)
     return list(dict.fromkeys(urls))
 
+
 # ------------------------------------------------------------------- model pages
+
 
 def parse_model_page(html: str, source_url: str = "") -> list[CompatibilityRow]:
     """Harvest a model page's parts list as compatibility rows (source: model_page)."""
@@ -347,13 +402,21 @@ def parse_model_page(html: str, source_url: str = "") -> list[CompatibilityRow]:
     rows = []
     for text in soup.find_all(string=PS_RE):
         for ps in PS_RE.findall(text):
-            rows.append(CompatibilityRow(
-                ps_number=ps, brand=brand, model_number=model,
-                description=description, source="model_page", source_url=source_url,
-            ))
+            rows.append(
+                CompatibilityRow(
+                    ps_number=ps,
+                    brand=brand,
+                    model_number=model,
+                    description=description,
+                    source="model_page",
+                    source_url=source_url,
+                )
+            )
     return list({r.ps_number: r for r in rows}.values())
 
+
 # ------------------------------------------------------------------ repair pages
+
 
 def parse_repair_index(html: str) -> list[str]:
     soup = BeautifulSoup(html, "lxml")
@@ -361,6 +424,7 @@ def parse_repair_index(html: str) -> list[str]:
     for a in soup.find_all("a", href=re.compile(r"/Repair/(Dishwasher|Refrigerator)/[A-Za-z\-]+/?$")):
         urls.append(urljoin(BASE_URL, a["href"]))
     return list(dict.fromkeys(urls))
+
 
 def parse_repair_page(html: str, appliance: str, source_url: str = "") -> RepairGuide:
     soup = BeautifulSoup(html, "lxml")
@@ -371,9 +435,11 @@ def parse_repair_page(html: str, appliance: str, source_url: str = "") -> Repair
         intro = _txt(p)
     causes: list[RepairCause] = []
     # Cause sections are h2 headings between the intro and the footer.
-    for rank, h2 in enumerate(soup.find_all("h2"), start=1):
+    for h2 in soup.find_all("h2"):
         name = _txt(h2)
-        if not name or name.lower().startswith(("common", "troubleshooting videos", "available brands", "more repair")):
+        if not name or name.lower().startswith(
+            ("common", "troubleshooting videos", "available brands", "more repair")
+        ):
             continue
         chunks: list[str] = []
         links: list[str] = []
@@ -382,13 +448,26 @@ def parse_repair_page(html: str, appliance: str, source_url: str = "") -> Repair
                 break
             if isinstance(sib, Tag):
                 chunks.append(sib.get_text(" ", strip=True))
-                links += [urljoin(BASE_URL, a["href"]) for a in sib.find_all("a", href=re.compile(r"-Parts?\.htm|/PS\d+"))]
-        causes.append(RepairCause(rank=len(causes) + 1, name=name,
-                                  text=" ".join(c for c in chunks if c)[:4000],
-                                  part_links=list(dict.fromkeys(links))))
+                links += [
+                    urljoin(BASE_URL, a["href"])
+                    for a in sib.find_all("a", href=re.compile(r"-Parts?\.htm|/PS\d+"))
+                ]
+        causes.append(
+            RepairCause(
+                rank=len(causes) + 1,
+                name=name,
+                text=" ".join(c for c in chunks if c)[:4000],
+                part_links=list(dict.fromkeys(links)),
+            )
+        )
     slug = urlparse(source_url).path.rstrip("/").rsplit("/", 1)[-1]
     return RepairGuide(
-        appliance=appliance, symptom=h1 or slug.replace("-", " "), slug=slug,
-        intro=intro, causes=causes, detail_level="full",
-        source_url=source_url, scraped_at=now_iso(),
+        appliance=appliance,
+        symptom=h1 or slug.replace("-", " "),
+        slug=slug,
+        intro=intro,
+        causes=causes,
+        detail_level="full",
+        source_url=source_url,
+        scraped_at=now_iso(),
     )

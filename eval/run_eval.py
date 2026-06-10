@@ -9,13 +9,13 @@ nondeterminism a failing case is retried once before being marked failed
 in the final answer must appear in the case's allowed list, in a tool result's
 ui_block, or in the parts catalog (GET /parts/{ps}).
 """
+
 from __future__ import annotations
 
 import argparse
 import asyncio
 import json
 import re
-import statistics
 import subprocess
 import time
 import uuid
@@ -30,9 +30,9 @@ HERE = Path(__file__).parent
 
 async def stream_chat(client: httpx.AsyncClient, session: str, message: str) -> dict:
     tools, text, deflected, blocks = [], [], None, []
-    async with client.stream("POST", f"{BASE}/chat",
-                             json={"session_id": session, "message": message},
-                             timeout=120) as resp:
+    async with client.stream(
+        "POST", f"{BASE}/chat", json={"session_id": session, "message": message}, timeout=120
+    ) as resp:
         resp.raise_for_status()
         event = ""
         async for line in resp.aiter_lines():
@@ -78,8 +78,7 @@ async def run_case(client: httpx.AsyncClient, case: dict, catalog_cache: dict) -
             notes.append(f"tools: wanted {sorted(want)} got {sorted(got)}")
         if not want and got:
             notes.append(f"tools: expected none, got {sorted(got)}")
-    if exp.get("answer_contains_any") and not any(
-            s.lower() in low for s in exp["answer_contains_any"]):
+    if exp.get("answer_contains_any") and not any(s.lower() in low for s in exp["answer_contains_any"]):
         notes.append(f"missing any of {exp['answer_contains_any']}")
     for s in exp.get("answer_not_contains", []):
         if s.lower() in low:
@@ -104,11 +103,16 @@ async def run_case(client: httpx.AsyncClient, case: dict, catalog_cache: dict) -
     if hallucinated:
         notes.append(f"HALLUCINATED: {sorted(set(hallucinated))}")
 
-    return {"id": case["id"], "suite": case["suite"], "passed": not notes,
-            "latency_ms": latency, "notes": "; ".join(notes),
-            "hallucinated": sorted(set(hallucinated)),
-            "tool_ok": not any(n.startswith("tools:") for n in notes),
-            "scope_ok": not any("deflect" in n or "scope" in n for n in notes)}
+    return {
+        "id": case["id"],
+        "suite": case["suite"],
+        "passed": not notes,
+        "latency_ms": latency,
+        "notes": "; ".join(notes),
+        "hallucinated": sorted(set(hallucinated)),
+        "tool_ok": not any(n.startswith("tools:") for n in notes),
+        "scope_ok": not any("deflect" in n or "scope" in n for n in notes),
+    }
 
 
 async def main() -> None:
@@ -132,7 +136,7 @@ async def main() -> None:
         async def guarded(case: dict) -> dict:
             async with sem:
                 result = await run_case(client, case, catalog_cache)
-                if not result["passed"]:           # one retry for nondeterminism
+                if not result["passed"]:  # one retry for nondeterminism
                     result = await run_case(client, case, catalog_cache)
                     result["notes"] = ("(after retry) " + result["notes"]) if result["notes"] else ""
                 return result
@@ -154,30 +158,46 @@ def write_results(results: list[dict], health: dict) -> None:
     hallucinated = sum(len(r["hallucinated"]) for r in results)
     tool_acc = 100 * sum(r["tool_ok"] for r in results) / total
     scope_acc = 100 * sum(r["scope_ok"] for r in results) / total
-    sha = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
-                         capture_output=True, text=True).stdout.strip()
+    sha = subprocess.run(  # noqa: S603 - fixed argv, dev tooling
+        ["git", "rev-parse", "--short", "HEAD"],  # noqa: S607
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
 
     lines = [
-        "# Eval Results", "",
+        "# Eval Results",
+        "",
         f"- **Model:** {health.get('llm_model')}  |  **Date:** {time.strftime('%Y-%m-%d %H:%M UTC', time.gmtime())}  |  **Git:** `{sha}`",
-        f"- **Methodology:** every case replays its turns through the live SSE `/chat` API in a fresh session; "
-        f"a failing case is retried once (LLM nondeterminism) before being marked failed.", "",
-        "## Summary", "",
-        "| Metric | Value |", "|---|---|",
-        f"| Overall pass rate | **{passed}/{total} ({100*passed/total:.0f}%)** |",
+        "- **Methodology:** every case replays its turns through the live SSE `/chat` API in a fresh session; "
+        "a failing case is retried once (LLM nondeterminism) before being marked failed.",
+        "",
+        "## Summary",
+        "",
+        "| Metric | Value |",
+        "|---|---|",
+        f"| Overall pass rate | **{passed}/{total} ({100 * passed / total:.0f}%)** |",
         f"| Tool-selection accuracy | {tool_acc:.0f}% |",
         f"| Scope adherence | {scope_acc:.0f}% |",
         f"| Hallucinated part numbers | **{hallucinated}** |",
-        f"| Latency p50 / p95 | {p50} ms / {p95} ms |", "",
-        "| Suite | Passed |", "|---|---|",
+        f"| Latency p50 / p95 | {p50} ms / {p95} ms |",
+        "",
+        "| Suite | Passed |",
+        "|---|---|",
     ]
     for suite, rs in sorted(suites.items()):
         lines.append(f"| {suite} | {sum(r['passed'] for r in rs)}/{len(rs)} |")
-    lines += ["", "## Per-case results", "",
-              "| Case | Suite | Result | Latency | Note |", "|---|---|---|---|---|"]
+    lines += [
+        "",
+        "## Per-case results",
+        "",
+        "| Case | Suite | Result | Latency | Note |",
+        "|---|---|---|---|---|",
+    ]
     for r in results:
-        lines.append(f"| {r['id']} | {r['suite']} | {'✅' if r['passed'] else '❌'} | "
-                     f"{r['latency_ms']} ms | {r['notes'] or ''} |")
+        lines.append(
+            f"| {r['id']} | {r['suite']} | {'✅' if r['passed'] else '❌'} | "
+            f"{r['latency_ms']} ms | {r['notes'] or ''} |"
+        )
     (HERE / "RESULTS.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     print("\n".join(lines[:20]))
     print(f"\nwrote eval/RESULTS.md  ({passed}/{total} passed, {hallucinated} hallucinations)")

@@ -6,25 +6,33 @@ Both expose:
                                    ("tool_calls", list) when tools are invoked
     classify(prompt) -> str       tiny sync call for the scope guard
 """
+
 from __future__ import annotations
 
 import json
 import re
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 
-from backend.app.config import settings
+from backend.app import config
 
 
 class RealLLM:
     def __init__(self) -> None:
         from openai import AsyncOpenAI, OpenAI
-        self._async = AsyncOpenAI(base_url=settings.llm_base_url, api_key=settings.llm_api_key)
-        self._sync = OpenAI(base_url=settings.llm_base_url, api_key=settings.llm_api_key)
+
+        self._async = AsyncOpenAI(base_url=config.settings.llm_base_url, api_key=config.settings.llm_api_key)
+        self._sync = OpenAI(base_url=config.settings.llm_base_url, api_key=config.settings.llm_api_key)
 
     async def chat(self, messages: list[dict], tools: list[dict]) -> AsyncIterator[tuple[str, Any]]:
         stream = await self._async.chat.completions.create(
-            model=settings.llm_model, messages=messages, tools=tools,
-            tool_choice="auto", stream=True, temperature=0.2)
+            model=config.settings.llm_model,
+            messages=messages,
+            tools=tools,
+            tool_choice="auto",
+            stream=True,
+            temperature=0.2,
+        )
         calls: dict[int, dict] = {}
         async for chunk in stream:
             delta = chunk.choices[0].delta if chunk.choices else None
@@ -39,15 +47,21 @@ class RealLLM:
                     slot["name"] = tc.function.name or slot["name"]
                     slot["arguments"] += tc.function.arguments or ""
         if calls:
-            yield ("tool_calls", [
-                {"id": c["id"], "name": c["name"],
-                 "arguments": json.loads(c["arguments"] or "{}")}
-                for c in calls.values()])
+            yield (
+                "tool_calls",
+                [
+                    {"id": c["id"], "name": c["name"], "arguments": json.loads(c["arguments"] or "{}")}
+                    for c in calls.values()
+                ],
+            )
 
     def classify(self, prompt: str) -> str:
         resp = self._sync.chat.completions.create(
-            model=settings.llm_model, max_tokens=8, temperature=0,
-            messages=[{"role": "user", "content": prompt}])
+            model=config.settings.llm_model,
+            max_tokens=8,
+            temperature=0,
+            messages=[{"role": "user", "content": prompt}],
+        )
         return (resp.choices[0].message.content or "").strip().lower()
 
 
@@ -70,20 +84,23 @@ class MockLLM:
         if last["role"] == "tool":
             text = self._final_text(messages)
             for i in range(0, len(text), 24):
-                yield ("token", text[i:i + 24])
+                yield ("token", text[i : i + 24])
             return
         call = self._route(messages)
         if call is not None:
             yield ("tool_calls", [call])
             return
-        text = ("Happy to help! Which appliance is acting up - your refrigerator "
-                "or your dishwasher - and what is it doing? A part number or "
-                "model number works too.")
+        text = (
+            "Happy to help! Which appliance is acting up - your refrigerator "
+            "or your dishwasher - and what is it doing? A part number or "
+            "model number works too."
+        )
         for i in range(0, len(text), 24):
-            yield ("token", text[i:i + 24])
+            yield ("token", text[i : i + 24])
 
     def classify(self, prompt: str) -> str:
         from backend.app.guard import IN_SCOPE_RE, INJECTION_RE
+
         msg = prompt.rsplit("Message:", 1)[-1]
         if INJECTION_RE.search(msg):
             return "injection"
@@ -100,16 +117,19 @@ class MockLLM:
         ps = ps_numbers[0] if ps_numbers else None
 
         def hist_text() -> str:
-            return " ".join(str(m.get("content", "")) for m in messages[:-1]
-                            if m.get("role") != "system")
+            return " ".join(str(m.get("content", "")) for m in messages[:-1] if m.get("role") != "system")
 
         if not ps and re.search(r"\b(this|that|the) part\b", low):
             prev = PS_RE.findall(hist_text())
             ps = prev[-1].upper() if prev else None
 
-        appliance = ("dishwasher" if re.search(r"dish ?wash", low)
-                     else "refrigerator" if re.search(r"fridge|refrigerat|freezer|ice maker|icemaker", low)
-                     else None)
+        appliance = (
+            "dishwasher"
+            if re.search(r"dish ?wash", low)
+            else "refrigerator"
+            if re.search(r"fridge|refrigerat|freezer|ice maker|icemaker", low)
+            else None
+        )
         if appliance is None and re.search(r"dish ?wash", hist_text(), re.I):
             appliance = "dishwasher"
         elif appliance is None and re.search(r"fridge|refrigerat", hist_text(), re.I):
@@ -117,8 +137,13 @@ class MockLLM:
 
         if re.search(r"\b(order|refund|return|cancel|shipment|delivery status)\b", low):
             m = re.search(r"\b(?:order\s*#?\s*)?(\d{6,12}|[A-Z]{2}\d{6,})\b", msg)
-            action = ("return" if "return" in low or "refund" in low
-                      else "cancel" if "cancel" in low else "order_status")
+            action = (
+                "return"
+                if "return" in low or "refund" in low
+                else "cancel"
+                if "cancel" in low
+                else "order_status"
+            )
             return self._call("order_support", action=action, order_id=m.group(1) if m else None)
 
         model = None
@@ -142,36 +167,53 @@ class MockLLM:
             if model:
                 prev = PS_RE.findall(hist_text())
                 if prev:
-                    return self._call("check_compatibility", part_identifier=prev[-1].upper(),
-                                      model_number=model)
+                    return self._call(
+                        "check_compatibility", part_identifier=prev[-1].upper(), model_number=model
+                    )
         if re.search(r"install|how (do|can) i (put|replace|fit)|replace", low) and ps:
             return self._call("get_installation_guide", part_identifier=ps)
         if ps:
             return self._call("get_part_details", part_identifier=ps)
         if re.search(r"\bpart\b|\bnumber\b|tell me about", low):
-            cands = [c for c in MPN_RE.findall(msg.upper())
-                     if not c.startswith("PS") and c != (model or "")]
+            cands = [c for c in MPN_RE.findall(msg.upper()) if not c.startswith("PS") and c != (model or "")]
             if cands:
                 return self._call("get_part_details", part_identifier=cands[0])
-        if appliance and re.search(r"not work|won'?t|isn'?t|broken|leak|nois|too warm|too cold|"
-                                   r"not (mak|clean|drain|dry|start|dispens)|stopped|problem|fix", low):
-            return self._call("diagnose_issue", symptom_description=msg,
-                              appliance_type=appliance, brand=self._brand(low))
+        if appliance and re.search(
+            r"not work|won'?t|isn'?t|broken|leak|nois|too warm|too cold|"
+            r"not (mak|clean|drain|dry|start|dispens)|stopped|problem|fix",
+            low,
+        ):
+            return self._call(
+                "diagnose_issue", symptom_description=msg, appliance_type=appliance, brand=self._brand(low)
+            )
         if re.search(r"\bneed\b|\bfind\b|looking for|\bsearch\b|\bthing\b|recommend|\bbuy\b", low):
             return self._call("search_parts", query=msg, appliance_type=appliance)
         return None
 
     @staticmethod
     def _brand(low: str) -> str | None:
-        for b in ("whirlpool", "ge", "samsung", "lg", "bosch", "frigidaire", "kitchenaid", "kenmore", "maytag"):
+        for b in (
+            "whirlpool",
+            "ge",
+            "samsung",
+            "lg",
+            "bosch",
+            "frigidaire",
+            "kitchenaid",
+            "kenmore",
+            "maytag",
+        ):
             if re.search(rf"\b{b}\b", low):
                 return b.capitalize()
         return None
 
     @staticmethod
     def _call(name: str, **arguments: Any) -> dict:
-        return {"id": f"mock-{name}", "name": name,
-                "arguments": {k: v for k, v in arguments.items() if v is not None}}
+        return {
+            "id": f"mock-{name}",
+            "name": name,
+            "arguments": {k: v for k, v in arguments.items() if v is not None},
+        }
 
     # ------------------------------------------------------ final answers
 
@@ -181,15 +223,19 @@ class MockLLM:
         data = json.loads(tool_msg["content"]).get("data", {})
         if name == "get_installation_guide":
             if not data.get("found"):
-                return (f"I couldn't find part {data.get('identifier')} in our catalog - "
-                        "could you double-check the number?")
-            bits = [f"Installing the {data['title']} ({data['ps_number']}) is rated "
-                    f"\"{data.get('difficulty') or 'Easy'}\""]
+                return (
+                    f"I couldn't find part {data.get('identifier')} in our catalog - "
+                    "could you double-check the number?"
+                )
+            bits = [
+                f"Installing the {data['title']} ({data['ps_number']}) is rated "
+                f'"{data.get("difficulty") or "Easy"}"'
+            ]
             if data.get("time"):
                 bits.append(f"and typically takes {data['time']}")
             text = " ".join(bits) + "."
             if data.get("customer_stories"):
-                text += f" One customer put it this way: \"{data['customer_stories'][0][:160]}\"."
+                text += f' One customer put it this way: "{data["customer_stories"][0][:160]}".'
             if data.get("video_url"):
                 text += f" There's a step-by-step video here: {data['video_url']}"
             text += " Want me to check it fits your model before you order?"
@@ -197,20 +243,29 @@ class MockLLM:
         if name == "check_compatibility":
             s, model, part = data["status"], data["model_number"], data["ps_number"]
             if s == "verified_fit":
-                return (f"Yes - {part} is a verified fit for model {model} per PartSelect's "
-                        "cross-reference data. Want install help or to add it to your cart?")
+                return (
+                    f"Yes - {part} is a verified fit for model {model} per PartSelect's "
+                    "cross-reference data. Want install help or to add it to your cart?"
+                )
             if s == "no_match_found":
                 extra = ""
                 if data.get("parts_verified_for_model_sample"):
-                    extra = (" For that model we do have verified parts like: "
-                             + "; ".join(data["parts_verified_for_model_sample"][:3]) + ".")
-                return (f"{part} is not in our verified compatibility list for model {model} "
-                        f"({data['evidence'].get('part_appliance','')} part vs. your model), so I "
-                        f"can't confirm a fit.{extra} Want me to look for the right equivalent?")
+                    extra = (
+                        " For that model we do have verified parts like: "
+                        + "; ".join(data["parts_verified_for_model_sample"][:3])
+                        + "."
+                    )
+                return (
+                    f"{part} is not in our verified compatibility list for model {model} "
+                    f"({data['evidence'].get('part_appliance', '')} part vs. your model), so I "
+                    f"can't confirm a fit.{extra} Want me to look for the right equivalent?"
+                )
             if s == "unknown_model":
-                return (f"I couldn't find model {model} in our data - model numbers are usually on a "
-                        "sticker inside the door or frame. Could you double-check it?")
-            return (f"I couldn't find part {part} in our catalog - could you double-check the number?")
+                return (
+                    f"I couldn't find model {model} in our data - model numbers are usually on a "
+                    "sticker inside the door or frame. Could you double-check it?"
+                )
+            return f"I couldn't find part {part} in our catalog - could you double-check the number?"
         if name == "diagnose_issue":
             causes = data.get("causes", [])
             parts = data.get("suggested_parts", [])
@@ -227,13 +282,17 @@ class MockLLM:
             return "\n".join(lines)
         if name == "get_part_details":
             if not data.get("found"):
-                return (f"I couldn't find part {data.get('identifier')} in our catalog - could you "
-                        "double-check the number? It usually starts with PS.")
+                return (
+                    f"I couldn't find part {data.get('identifier')} in our catalog - could you "
+                    "double-check the number? It usually starts with PS."
+                )
             price = f"${data['price']:.2f}" if data.get("price") else "price unavailable"
-            return (f"{data['title']} ({data['ps_number']}, mfr # {data['mpn']}) by {data['brand']} - "
-                    f"{price}, {data.get('availability','')}. Rated "
-                    f"\"{data.get('install_difficulty') or 'Easy'}\" to install. Want me to check it "
-                    "fits your model?")
+            return (
+                f"{data['title']} ({data['ps_number']}, mfr # {data['mpn']}) by {data['brand']} - "
+                f"{price}, {data.get('availability', '')}. Rated "
+                f'"{data.get("install_difficulty") or "Easy"}" to install. Want me to check it '
+                "fits your model?"
+            )
         if name == "search_parts":
             results = data.get("results", [])
             if not results:
@@ -241,7 +300,7 @@ class MockLLM:
             lines = ["Here's what I found:"]
             for p in results[:3]:
                 price = f" - ${p['price']:.2f}" if p.get("price") else ""
-                lines.append(f"• {p['title']} ({p['ps_number']}){price}, {p.get('availability','')}")
+                lines.append(f"• {p['title']} ({p['ps_number']}){price}, {p.get('availability', '')}")
             lines.append("Share your model number and I'll confirm which one fits.")
             return "\n".join(lines)
         if name == "order_support":
@@ -254,10 +313,12 @@ class MockLLM:
             if data.get("return_started"):
                 text += " I've started a return - you'll get a prepaid label by email (365-day returns)."
             if data.get("cancellable") is False:
-                text += " It's already on the move so it can't be cancelled, but returns are free for 365 days."
+                text += (
+                    " It's already on the move so it can't be cancelled, but returns are free for 365 days."
+                )
             return text
         return "Done - anything else fridge- or dishwasher-related I can help with?"
 
 
 def get_client():
-    return MockLLM() if settings.mock_llm else RealLLM()
+    return MockLLM() if config.settings.mock_llm else RealLLM()

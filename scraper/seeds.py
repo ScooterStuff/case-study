@@ -1,4 +1,5 @@
 """Seed URLs, crawl scope and politeness constants for the PartSelect scraper."""
+
 from __future__ import annotations
 
 BASE_URL = "https://www.partselect.com"
@@ -11,8 +12,14 @@ APPLIANCES: dict[str, str] = {
 # Major brands crawled per appliance (brand listing pattern:
 # https://www.partselect.com/{Brand}-{Appliance}-Parts.htm)
 BRANDS: list[str] = [
-    "Whirlpool", "GE", "Frigidaire", "Samsung",
-    "LG", "Bosch", "KitchenAid", "Kenmore",
+    "Whirlpool",
+    "GE",
+    "Frigidaire",
+    "Samsung",
+    "LG",
+    "Bosch",
+    "KitchenAid",
+    "Kenmore",
 ]
 
 REPAIR_INDEXES: dict[str, str] = {
@@ -30,8 +37,10 @@ MUST_HAVE_MODEL_URLS: list[str] = [
     f"{BASE_URL}/Models/WDT780SAEM1/",  # spec example dishwasher model
 ]
 
+
 def brand_listing_url(brand: str, appliance: str) -> str:
     return f"{BASE_URL}/{brand}-{appliance.capitalize()}-Parts.htm"
+
 
 # Politeness / scope caps (CONTEXT.md §8 - mandatory).
 REQUEST_DELAY_SECONDS = 2.5

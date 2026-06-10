@@ -1,0 +1,27 @@
+[tool.pytest.ini_options]
+testpaths = ["tests", "backend/tests"]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.coverage.run]
+source = ["backend/app"]
+omit = ["backend/app/__init__.py"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+exclude = ["frontend", ".venv", "scraper/data"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "S"]
+ignore = [
+  "S101",   # asserts (tests)
+  "S608",   # SQL building from constant column list (parameterized values)
+  "S311",   # random for deflection variety, not crypto
+  "E501",   # long lines in prompts/data literals
+]
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+check_untyped_defs = true
