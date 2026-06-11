@@ -1,0 +1,129 @@
+<svg viewBox="0 0 1600 1010" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, DejaVu Sans, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#337778"/>
+    </marker>
+    <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#9AA6A5"/>
+    </marker>
+  </defs>
+  <rect width="1600" height="1010" fill="#FFFFFF"/>
+  <text x="60" y="52" font-size="30" font-weight="bold" fill="#121212">System architecture</text>
+  <text x="60" y="82" font-size="17" fill="#555453">One agent, hard rails — facts from SQL, fuzz from vectors, one database</text>
+
+  <!-- FRONTEND -->
+  <rect x="60" y="120" width="330" height="300" rx="14" fill="#FFFFFF" stroke="#337778" stroke-width="2.5"/>
+  <rect x="60" y="120" width="330" height="44" rx="14" fill="#337778"/>
+  <text x="225" y="149" font-size="18" font-weight="bold" fill="#FFFFFF" text-anchor="middle">FRONTEND — React (CRA)</text>
+  <text x="85" y="195" font-size="15" fill="#121212">• SSE client (fetch + ReadableStream)</text>
+  <text x="85" y="223" font-size="15" fill="#121212">• Rich blocks: ProductCard, CompatResult,</text>
+  <text x="100" y="245" font-size="15" fill="#121212">Diagnosis, InstallGuide, OrderStatus</text>
+  <text x="85" y="273" font-size="15" fill="#121212">• Cart drawer + chat-native buttons</text>
+  <text x="85" y="301" font-size="15" fill="#121212">• PartSelect brand tokens from real CSS</text>
+  <rect x="85" y="330" width="280" height="62" rx="8" fill="#F6F6F4" stroke="#D7D7D7"/>
+  <text x="225" y="355" font-size="14" font-weight="bold" fill="#555453" text-anchor="middle">nginx (container mode)</text>
+  <text x="225" y="377" font-size="13" fill="#555453" text-anchor="middle">proxies /chat unbuffered — SSE streams</text>
+
+  <!-- arrows FE <-> BE -->
+  <line x1="390" y1="240" x2="488" y2="240" stroke="#337778" stroke-width="3" marker-end="url(#a)" marker-start="url(#a)"/>
+  <text x="440" y="222" font-size="13" fill="#555453" text-anchor="middle">SSE</text>
+
+  <!-- BACKEND -->
+  <rect x="495" y="120" width="640" height="430" rx="14" fill="#FFFFFF" stroke="#337778" stroke-width="2.5"/>
+  <rect x="495" y="120" width="640" height="44" rx="14" fill="#337778"/>
+  <text x="815" y="149" font-size="18" font-weight="bold" fill="#FFFFFF" text-anchor="middle">BACKEND — FastAPI  ·  POST /chat (SSE)  ·  request-id middleware</text>
+
+  <rect x="520" y="185" width="180" height="100" rx="10" fill="#F6F6F4" stroke="#337778" stroke-width="2"/>
+  <text x="610" y="218" font-size="16" font-weight="bold" fill="#121212" text-anchor="middle">Scope guard</text>
+  <text x="610" y="242" font-size="13" fill="#555453" text-anchor="middle">regex fast-path →</text>
+  <text x="610" y="262" font-size="13" fill="#555453" text-anchor="middle">tiny classifier</text>
+
+  <line x1="700" y1="235" x2="738" y2="235" stroke="#337778" stroke-width="3" marker-end="url(#a)"/>
+
+  <rect x="745" y="185" width="180" height="100" rx="10" fill="#337778"/>
+  <text x="835" y="218" font-size="16" font-weight="bold" fill="#FFFFFF" text-anchor="middle">Agent loop</text>
+  <text x="835" y="242" font-size="13" fill="#DCEAE9" text-anchor="middle">one LLM · ≤4 rounds</text>
+  <text x="835" y="262" font-size="13" fill="#DCEAE9" text-anchor="middle">parallel tool exec</text>
+
+  <line x1="925" y1="235" x2="963" y2="235" stroke="#337778" stroke-width="3" marker-end="url(#a)"/>
+
+  <rect x="970" y="185" width="140" height="100" rx="10" fill="#FFFFFF" stroke="#F4364C" stroke-width="3"/>
+  <text x="1040" y="220" font-size="15" font-weight="bold" fill="#F4364C" text-anchor="middle">Hallucination</text>
+  <text x="1040" y="240" font-size="15" font-weight="bold" fill="#F4364C" text-anchor="middle">validator</text>
+  <text x="1040" y="265" font-size="12" fill="#555453" text-anchor="middle">PS# ⊆ tool results</text>
+
+  <!-- tool registry -->
+  <rect x="520" y="320" width="590" height="200" rx="10" fill="#F6F6F4" stroke="#D7D7D7" stroke-width="2"/>
+  <text x="815" y="350" font-size="16" font-weight="bold" fill="#121212" text-anchor="middle">Tool registry — typed Pydantic schemas, each returns data + optional ui_block</text>
+  <g font-size="14" fill="#121212">
+    <rect x="545" y="372" width="170" height="54" rx="8" fill="#FFFFFF" stroke="#337778"/><text x="630" y="396" text-anchor="middle">search_parts</text><text x="630" y="415" font-size="11.5" fill="#555453" text-anchor="middle">hybrid kw+vector, RRF</text>
+    <rect x="730" y="372" width="170" height="54" rx="8" fill="#FFFFFF" stroke="#337778"/><text x="815" y="396" text-anchor="middle">get_part_details</text><text x="815" y="415" font-size="11.5" fill="#555453" text-anchor="middle">PS / MPN / superseded</text>
+    <rect x="915" y="372" width="170" height="54" rx="8" fill="#FFFFFF" stroke="#337778"/><text x="1000" y="396" text-anchor="middle">check_compatibility</text><text x="1000" y="415" font-size="11.5" fill="#555453" text-anchor="middle">SQL JOIN, 4-state verdict</text>
+    <rect x="545" y="440" width="170" height="54" rx="8" fill="#FFFFFF" stroke="#337778"/><text x="630" y="464" text-anchor="middle">diagnose_issue</text><text x="630" y="483" font-size="11.5" fill="#555453" text-anchor="middle">RAG → ranked causes</text>
+    <rect x="730" y="440" width="170" height="54" rx="8" fill="#FFFFFF" stroke="#337778"/><text x="815" y="464" text-anchor="middle">get_installation_guide</text><text x="815" y="483" font-size="11.5" fill="#555453" text-anchor="middle">difficulty · video · stories</text>
+    <rect x="915" y="440" width="170" height="54" rx="8" fill="#FFFFFF" stroke="#337778"/><text x="1000" y="464" text-anchor="middle">order_support</text><text x="1000" y="483" font-size="11.5" fill="#555453" text-anchor="middle">mock → ERP/OMS later</text>
+  </g>
+  <line x1="835" y1="285" x2="835" y2="313" stroke="#337778" stroke-width="3" marker-end="url(#a)"/>
+
+  <!-- LLM provider -->
+  <rect x="1230" y="150" width="310" height="150" rx="14" fill="#F6F6F4" stroke="#D7D7D7" stroke-width="2"/>
+  <text x="1385" y="185" font-size="17" font-weight="bold" fill="#121212" text-anchor="middle">LLM provider</text>
+  <text x="1385" y="212" font-size="14" fill="#555453" text-anchor="middle">any OpenAI-compatible API</text>
+  <text x="1385" y="234" font-size="14" fill="#555453" text-anchor="middle">swap via 3 env vars</text>
+  <text x="1385" y="262" font-size="14" fill="#555453" text-anchor="middle">MOCK_LLM=1 → scripted client</text>
+  <text x="1385" y="282" font-size="13" fill="#777" text-anchor="middle">(keyless CI · e2e · demo)</text>
+  <line x1="1135" y1="225" x2="1222" y2="225" stroke="#337778" stroke-width="3" marker-end="url(#a)" marker-start="url(#a)"/>
+
+  <!-- DATABASE -->
+  <rect x="495" y="610" width="640" height="290" rx="14" fill="#FFFFFF" stroke="#337778" stroke-width="2.5"/>
+  <rect x="495" y="610" width="640" height="44" rx="14" fill="#121212"/>
+  <text x="815" y="639" font-size="18" font-weight="bold" fill="#FFFFFF" text-anchor="middle">ONE DATABASE — Postgres 16 + pgvector</text>
+  <rect x="520" y="675" width="290" height="200" rx="10" fill="#337778"/>
+  <text x="665" y="706" font-size="16" font-weight="bold" fill="#FFFFFF" text-anchor="middle">FACTS — deterministic SQL</text>
+  <text x="665" y="734" font-size="14" fill="#DCEAE9" text-anchor="middle">parts · prices · stock</text>
+  <text x="665" y="757" font-size="14" fill="#DCEAE9" text-anchor="middle">compatibility (1,130 rows)</text>
+  <text x="665" y="780" font-size="14" fill="#DCEAE9" text-anchor="middle">symptoms · supersessions</text>
+  <text x="665" y="803" font-size="14" fill="#DCEAE9" text-anchor="middle">repair guides + causes</text>
+  <text x="665" y="826" font-size="14" fill="#DCEAE9" text-anchor="middle">tsvector keyword index</text>
+  <text x="665" y="856" font-size="13" font-style="italic" fill="#F3C04C" text-anchor="middle">never hallucinated — only queried</text>
+  <rect x="830" y="675" width="280" height="200" rx="10" fill="#F3C04C"/>
+  <text x="970" y="706" font-size="16" font-weight="bold" fill="#121212" text-anchor="middle">SEMANTICS — pgvector RAG</text>
+  <text x="970" y="734" font-size="14" fill="#3A3A3A" text-anchor="middle">embeddings · HNSW · cosine</text>
+  <text x="970" y="757" font-size="14" fill="#3A3A3A" text-anchor="middle">repair_chunks (ranked causes)</text>
+  <text x="970" y="780" font-size="14" fill="#3A3A3A" text-anchor="middle">part_docs (titles + symptoms)</text>
+  <text x="970" y="803" font-size="14" fill="#3A3A3A" text-anchor="middle">support_snippets (Q&amp;A, stories)</text>
+  <text x="970" y="856" font-size="13" font-style="italic" fill="#121212" text-anchor="middle">semantic hits JOIN price &amp; stock</text>
+  <line x1="815" y1="550" x2="815" y2="603" stroke="#337778" stroke-width="3" marker-end="url(#a)"/>
+  <text x="833" y="585" font-size="13" fill="#555453">raw parameterized SQL (no ORM)</text>
+
+  <!-- OFFLINE PIPELINE -->
+  <rect x="60" y="610" width="330" height="290" rx="14" fill="#F6F6F4" stroke="#D7D7D7" stroke-width="2"/>
+  <text x="225" y="645" font-size="17" font-weight="bold" fill="#121212" text-anchor="middle">OFFLINE PIPELINE</text>
+  <rect x="90" y="668" width="270" height="56" rx="8" fill="#FFFFFF" stroke="#337778"/>
+  <text x="225" y="691" font-size="14" font-weight="bold" fill="#121212" text-anchor="middle">polite scraper</text>
+  <text x="225" y="711" font-size="12.5" fill="#555453" text-anchor="middle">cache · 2.5s delay · 600-page cap</text>
+  <line x1="225" y1="724" x2="225" y2="742" stroke="#337778" stroke-width="2.5" marker-end="url(#a)"/>
+  <rect x="90" y="746" width="270" height="50" rx="8" fill="#FFFFFF" stroke="#337778"/>
+  <text x="225" y="768" font-size="14" font-weight="bold" fill="#121212" text-anchor="middle">JSON datasets (committed)</text>
+  <text x="225" y="787" font-size="12.5" fill="#555453" text-anchor="middle">parts · compatibility · repair guides</text>
+  <line x1="225" y1="796" x2="225" y2="814" stroke="#337778" stroke-width="2.5" marker-end="url(#a)"/>
+  <rect x="90" y="818" width="270" height="56" rx="8" fill="#FFFFFF" stroke="#337778"/>
+  <text x="225" y="840" font-size="14" font-weight="bold" fill="#121212" text-anchor="middle">ingest.py</text>
+  <text x="225" y="860" font-size="12.5" fill="#555453" text-anchor="middle">--rebuild (embed) | --load-seed (keyless)</text>
+  <line x1="360" y1="846" x2="488" y2="846" stroke="#337778" stroke-width="3" marker-end="url(#a)"/>
+  <text x="424" y="830" font-size="12.5" fill="#555453" text-anchor="middle">seed.sql.gz</text>
+  <text x="424" y="866" font-size="12.5" fill="#555453" text-anchor="middle">self-heals 1st boot</text>
+
+  <!-- EVAL -->
+  <rect x="1230" y="610" width="310" height="290" rx="14" fill="#FFFFFF" stroke="#F3C04C" stroke-width="3"/>
+  <text x="1385" y="645" font-size="17" font-weight="bold" fill="#121212" text-anchor="middle">EVAL HARNESS</text>
+  <text x="1385" y="676" font-size="14" fill="#555453" text-anchor="middle">40 multi-turn cases, 7 suites,</text>
+  <text x="1385" y="698" font-size="14" fill="#555453" text-anchor="middle">replayed over live SSE</text>
+  <text x="1385" y="745" font-size="34" font-weight="bold" fill="#337778" text-anchor="middle">40/40 · 0</text>
+  <text x="1385" y="772" font-size="13" fill="#555453" text-anchor="middle">pass rate · hallucinated PS#s</text>
+  <text x="1385" y="812" font-size="14" fill="#555453" text-anchor="middle">+ pytest (87% cov) · Jest · Playwright</text>
+  <text x="1385" y="836" font-size="14" fill="#555453" text-anchor="middle">CI: lint · tests · e2e · manual eval</text>
+  <text x="1385" y="876" font-size="13" font-style="italic" fill="#777" text-anchor="middle">evals prove the agent; tests prove the code</text>
+  <path d="M 1385 610 L 1385 460 L 1142 460" fill="none" stroke="#9AA6A5" stroke-width="3" stroke-dasharray="7 5" marker-end="url(#g)"/>
+  <text x="1395" y="540" font-size="12.5" fill="#777">hits /chat like a user</text>
+</svg>
