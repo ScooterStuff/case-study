@@ -33,8 +33,25 @@ class Fetcher:
         self.delay = delay
         self.max_pages = max_pages
         self.live_requests = 0
+        # Browser-like header set: User-Agent alone is no longer enough — PartSelect
+        # checks Accept/Accept-Language/Sec-Fetch-* and 403s otherwise.
         self._client = httpx.Client(
-            headers={"User-Agent": USER_AGENT},
+            headers={
+                "User-Agent": USER_AGENT,
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.9",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Cache-Control": "no-cache",
+                "Pragma": "no-cache",
+                "Sec-Ch-Ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+                "Sec-Ch-Ua-Mobile": "?0",
+                "Sec-Ch-Ua-Platform": '"Windows"',
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "none",
+                "Sec-Fetch-User": "?1",
+                "Upgrade-Insecure-Requests": "1",
+            },
             follow_redirects=True,
             timeout=30,
             trust_env=False,  # NOTE: ignore env proxies; sandbox sets a SOCKS proxy httpx cannot use
