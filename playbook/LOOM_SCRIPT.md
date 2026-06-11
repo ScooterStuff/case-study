@@ -13,34 +13,38 @@ in *italics*. Suggested structure: slides 1–3 → **live demo** → slides 4�
 > and the key word is *measured*. Forty eval cases, zero hallucinated part
 > numbers, real scraped data. Let me show you how I got there.
 
-## Slide 2 — Read the spec like an evaluator (~40s)
+## Slide 2 — Built around three user jobs (~40s)
 
-> Before writing any code I asked: how does this actually get graded? Whoever
-> evaluates this will open the app and type these three example queries first.
-> So I treated them as acceptance tests — they were written into an automated
-> eval before the backend existed, and they're seeded as suggestion chips in
-> the UI.
+> Before any code, I asked what someone with a broken appliance actually wants
+> from a parts chat. The three example queries in the brief map cleanly onto
+> the three core jobs: "I have the part — walk me through the install."
+> "Will this fit MY machine?" — that's the money question. And "something's
+> broken — figure out what I need."
 >
-> And the strategy follows from that: every candidate ships a branded chat box
-> with an LLM and a few tools. The differentiator isn't more features — it's
-> *proof*. A measured agent, honest about its data, that a grader can verify in
-> five minutes.
+> So each job became a product flow in the chat — install help, fit checks,
+> diagnosis — and each one also became an automated test that gates every
+> change. And that's the product principle in the bottom bar: a parts
+> assistant is only useful if every answer can be trusted. Wrong part numbers
+> mean wrong orders and returns. So accuracy is a feature, and I measure it
+> like one.
 
-## Slide 3 — The trap (~50s) ← spend time here
+## Slide 3 — Why trust is the hard part (~50s) ← spend time here
 
-> Here's my favorite discovery, and it reshaped the whole architecture. I pulled
-> the real PartSelect pages for the example queries, and it turns out
-> PS11752778 — the part in query one — is a *refrigerator door shelf bin*. But
-> query two asks if it's compatible with WDT780SAEM1, which is a *dishwasher*
-> model.
+> Here's why that principle isn't theoretical. Before designing anything I
+> pulled the real PartSelect pages for those queries — and look closely:
+> PS11752778 is a *refrigerator door shelf bin*. WDT780SAEM1 is a *dishwasher*
+> model. The example query asks if they're compatible.
 >
-> So query two is a hallucination trap, intentional or not. The correct answer
-> is "that's not a verified fit" — and any agent that cheerfully says "yes,
-> compatible!" is making things up. That one fact dictated my core design rule:
-> compatibility is a database join. Never an LLM guess.
+> That's exactly what real customers do — they mix up parts and models all the
+> time. And it's the worst place for a chatbot to be agreeable: a confident
+> "yes, it fits!" causes a wrong order, a return, and lost trust in the store.
+>
+> So this product has one hard rule: compatibility comes from a database join
+> over scraped fitment data. The LLM never gets to guess. When there's no
+> verified match, it says so honestly and offers the parts that *do* fit.
 
-*(Optional: cut to the live demo here — run the three spec queries, show the
-honest ⚠ verdict on query 2, the ranked diagnosis on query 3, then add to cart.
+*(Optional: cut to the live demo here — run the three queries, show the honest
+⚠ verdict on query 2, the ranked diagnosis on query 3, then add to cart.
 Then come back to slide 4.)*
 
 ## Slide 4 — Architecture (~45s)
@@ -80,7 +84,7 @@ Then come back to slide 4.)*
 > And everything ships as a committed seed — a fresh clone runs with no
 > scraping and no API keys. First boot self-heals the database.
 
-## Slide 7 — The eval (~45s)
+## Slide 7 — Accuracy, measured (~45s)
 
 > This is the slide I'd want you to remember. Forty multi-turn cases replayed
 > through the live streaming API — not unit tests, the actual agent. Tool
