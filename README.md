@@ -170,7 +170,7 @@ sequenceDiagram
   conversation's tool results — violations are retried, then stripped and
   logged (`backend/data/hallucination_log.jsonl` stays empty across the eval).
 - **Keyless demo mode**: `MOCK_LLM=1` swaps in a deterministic, tool-faithful
-  scripted client — CI, e2e, and demos run with zero API keys.
+  scripted client — CI and demos run with zero API keys.
 
 <!-- screenshots: docs/media/block-*.png (see docs/media/README.md) -->
 
@@ -184,11 +184,10 @@ sequenceDiagram
 | Unit (many) | parsers, retrieval SQL, guard, validator, tools, agent loop | `make test` |
 | Integration | FastAPI TestClient over real Postgres+pgvector (embedded `pgserver`) | `make test` |
 | Frontend | Jest + RTL: blocks, SSE chunk-reassembly, composer keys | `make test` |
-| E2E | Playwright fix-it journey vs MOCK_LLM stack | `make e2e` |
 | Agent quality | 40-case eval harness | `make eval` |
 
-Backend coverage **82%** (CI gate ≥80%). Lint: ruff (+bandit rules) and
-ruff-format, enforced by CI and pre-commit. CI: backend / frontend / e2e on
+Backend coverage **83%** (CI gate ≥80%). Lint: ruff (+bandit rules) and
+ruff-format, enforced by CI and pre-commit. CI: backend / frontend on
 every push; eval is a manual workflow (needs an LLM secret, costs money).
 
 ## Design decisions (full log: [`playbook/TRADEOFFS.md`](playbook/TRADEOFFS.md))
@@ -238,7 +237,6 @@ make setup     # venv + deps + pre-commit hooks
 make test      # pytest (+coverage) and jest
 make lint      # ruff check + format
 make smoke     # the three spec queries against :8000
-make e2e       # compose (MOCK_LLM=1) + playwright journey
 make eval      # regenerate eval/RESULTS.md
 ```
 

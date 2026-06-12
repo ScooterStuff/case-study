@@ -329,20 +329,6 @@ class MockLLM:
                 lines.append(f"• {p['title']} ({p['ps_number']}){price}, {p.get('availability', '')}")
             lines.append("Share your model number and I'll confirm which one fits.")
             return "\n".join(lines)
-        if name == "order_support":
-            if data.get("needs") == "order_id":
-                return "Happy to help with that - what's your order number (and the email on the order)?"
-            text = f"Order {data['order_id']} is {data['status']}"
-            if data.get("eta"):
-                text += f", arriving around {data['eta']} via {data['carrier']}"
-            text += "."
-            if data.get("return_started"):
-                text += " I've started a return - you'll get a prepaid label by email (365-day returns)."
-            if data.get("cancellable") is False:
-                text += (
-                    " It's already on the move so it can't be cancelled, but returns are free for 365 days."
-                )
-            return text
         return "Done - anything else fridge- or dishwasher-related I can help with?"
 
 

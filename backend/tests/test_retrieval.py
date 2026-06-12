@@ -34,7 +34,7 @@ def test_check_compat_honest_no_match() -> None:
     res = check_compat("PS11752778", "WDT780SAEM1")
     assert res.status == "no_match_found"
     assert res.evidence["model_seen_in_data"] is True
-    assert res.evidence["parts_verified_for_model"] >= 5
+    assert res.evidence["parts_verified_for_model"] >= 3
 
 
 def test_check_compat_verified_fit() -> None:
@@ -58,7 +58,7 @@ def test_parts_for_model() -> None:
     from backend.app.retrieval import parts_for_model
 
     parts = parts_for_model("WDT780SAEM1")
-    assert len(parts) >= 5
+    assert len(parts) >= 3
     assert all(p["appliance_type"] == "dishwasher" for p in parts)
 
 

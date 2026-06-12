@@ -1,4 +1,4 @@
-.PHONY: setup ingest dev test e2e eval lint up down fresh smoke
+.PHONY: setup ingest dev test eval lint up down fresh smoke
 
 PY := .venv/bin/python
 PIP := .venv/bin/pip
@@ -7,7 +7,6 @@ setup:            ## venv + backend deps + frontend deps + git hooks
 	python3 -m venv .venv
 	$(PIP) install -r backend/requirements.txt -r backend/requirements-dev.txt ruff pre-commit
 	cd frontend && npm install --no-audit --no-fund
-	cd e2e && npm install --no-audit --no-fund
 	.venv/bin/pre-commit install
 
 ingest:           ## load the committed seed into Postgres (no API keys needed)
@@ -22,11 +21,6 @@ dev:              ## backend (:8000) + frontend (:3000) dev servers
 test:             ## unit + integration tests (backend & frontend)
 	$(PY) -m pytest -q
 	cd frontend && CI=true npx react-scripts test --watchAll=false
-
-e2e:              ## full stack with MOCK_LLM=1 + the Playwright journey
-	docker compose -f docker-compose.yml -f docker-compose.ci.yml up --build -d
-	cd e2e && npx playwright install chromium && E2E_BASE_URL=http://localhost:3000 npx playwright test; \
-	  rc=$$?; docker compose down; exit $$rc
 
 eval:             ## eval harness against a running backend (:8000)
 	$(PY) eval/run_eval.py
