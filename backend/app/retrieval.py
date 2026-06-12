@@ -158,7 +158,42 @@ def keyword_search(q: str, appliance: str | None = None, limit: int = 8) -> list
         params.append(appliance)
     sql += " ORDER BY rank DESC LIMIT %s"
     params.append(limit)
-    return [_part_row(r[:-1]) for r in conn.execute(sql, params)]
+    rows = list(conn.execute(sql, params))
+    if not rows:
+        # Natural-language fallback: AND-mode tsquery is too strict for "I need
+        # the thing that sprays water...". Retry with content words OR'd.
+        or_q = _content_words_or(q)
+        if or_q:
+            sql2 = f"""SELECT {PART_COLS}, ts_rank(search_tsv, to_tsquery('english', %s)) AS rank
+                       FROM parts WHERE search_tsv @@ to_tsquery('english', %s)"""
+            params2: list = [or_q, or_q]
+            if appliance:
+                sql2 += " AND appliance_type = %s"
+                params2.append(appliance)
+            sql2 += " ORDER BY rank DESC LIMIT %s"
+            params2.append(limit)
+            rows = list(conn.execute(sql2, params2))
+    return [_part_row(r[:-1]) for r in rows]
+
+
+# Filler words that show up in "I need the thing that sprays water..." style
+# queries. Postgres' english stopword list catches some of these, but not the
+# verbal-tic ones (need, want, looking, thing, fix, ...).
+_FILLER_WORDS: frozenset[str] = frozenset(
+    """
+    the that this with from into your mine need needs needed want wants wanted
+    looking look find help please thing stuff what when where which why how fix
+    fixing fixed make makes making get got getting are was were has have had
+    can could would should about
+    """.split()
+)
+
+
+def _content_words_or(q: str) -> str | None:
+    """OR-join content words for tsquery fallback when AND-mode found nothing."""
+    tokens = re.findall(r"[A-Za-z]{3,}", q.lower())
+    keep = [t for t in tokens if t not in _FILLER_WORDS]
+    return " | ".join(keep) if keep else None
 
 
 def vector_search_parts(q: str, appliance: str | None = None, k: int = 8) -> list[dict]:
