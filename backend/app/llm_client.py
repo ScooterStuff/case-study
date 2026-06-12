@@ -17,6 +17,7 @@ from typing import Any
 from backend.app import config
 from backend.app.appliances import ALL_KEYWORDS, APPLIANCES, KEYWORDS, display_list
 
+
 # Appliance detection for MockLLM is derived from appliances.toml — adding a
 # new appliance there (name + keywords) auto-extends the mock router, the
 # bare-appliance clarifier, and the closing line. Internal whitespace in a
