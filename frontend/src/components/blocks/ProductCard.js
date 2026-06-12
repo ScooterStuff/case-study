@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { useCart } from "../../context/CartContext";
 
 function Stars({ rating }) {
   if (rating == null) return null;
@@ -11,7 +10,6 @@ function Stars({ rating }) {
 }
 
 export default function ProductCard({ product, description, symptoms, onSend, compact }) {
-  const cart = useCart();
   const [modelOpen, setModelOpen] = useState(false);
   const [model, setModel] = useState("");
   const p = product;
@@ -40,9 +38,6 @@ export default function ProductCard({ product, description, symptoms, onSend, co
           <div className="muted small">Fixes: {symptoms.slice(0, 3).join(", ")}</div>
         )}
         <div className="product-actions">
-          <button className="btn btn-teal" onClick={() => { cart.add(p); cart.setOpen(true); }}>
-            Add to cart
-          </button>
           <button className="btn btn-outline" onClick={() => setModelOpen((v) => !v)}>
             Check fits my model
           </button>

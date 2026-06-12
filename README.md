@@ -1,7 +1,7 @@
 # PartSelect Chat Agent
 
 > A grounded PartSelect chat agent that takes a customer from symptom to a
-> verified, in-cart part — with measured accuracy.
+> verified part — with measured accuracy.
 
 [![CI](https://github.com/ScooterStuff/case-study/actions/workflows/ci.yml/badge.svg)](https://github.com/ScooterStuff/case-study/actions/workflows/ci.yml)
 
@@ -10,8 +10,8 @@
 -->
 
 Scoped to **refrigerator and dishwasher parts**: diagnose a symptom, find the
-right part, verify it fits your model, get install help, add it to the cart —
-in one conversation, with rich in-chat components and zero invented part numbers.
+right part, verify it fits your model, and get install help — in one
+conversation, with rich in-chat components and zero invented part numbers.
 
 ## Quickstart
 
@@ -35,6 +35,12 @@ Try the three canonical queries (also seeded as suggestion chips in the UI):
 1. `How can I install part number PS11752778?`
 2. `Is this part compatible with my WDT780SAEM1 model?` *(as a follow-up — pronouns resolve)*
 3. `The ice maker on my Whirlpool fridge is not working. How can I fix it?`
+
+### Photo → model number (you're elbows-deep in a dishwasher)
+
+An extra button in the composer turns the UX into a real repair companion:
+
+- 📷 **Photo → model number** — snap or upload the appliance sticker; client-side OCR (Tesseract.js, lazy-loaded so the bundle isn't paid up-front) extracts the model number and pre-fills the next message as either a parts search or a compatibility check, depending on the conversation so far.
 
 ## Eval results (the part most chatbots skip)
 
@@ -61,8 +67,7 @@ lets semantic hits JOIN prices and stock in one query. Every tool can attach a
 **ui_block**, which the frontend renders as a rich component mid-stream. Before
 the final answer flushes, a **validator** rejects any part number that didn't
 come from a tool result. The tool registry is the extension point: a new
-appliance is new data plus an enum value; real order support is the same
-`order_support` schema with an ERP client behind it.
+appliance is new data plus an enum value.
 
 **Compatibility is a database join, never an LLM guess** — and the data layer is
 honest about its limits: a miss is reported as *"not in our verified list"*
@@ -72,7 +77,7 @@ honest about its limits: a miss is reported as *"not in our verified list"*
 flowchart LR
     subgraph CLIENT["Frontend — React (CRA template, adapted)"]
         UI["Chat UI<br/>streaming + rich blocks"]
-        BLOCKS["UI Blocks<br/>ProductCard · CompatResult ·<br/>Diagnosis · InstallGuide ·<br/>OrderStatus · Cart"]
+        BLOCKS["UI Blocks<br/>ProductCard · CompatResult ·<br/>Diagnosis · InstallGuide"]
         UI --- BLOCKS
     end
 
@@ -90,7 +95,6 @@ flowchart LR
         T3["check_compatibility"]
         T4["diagnose_issue"]
         T5["get_installation_guide"]
-        T6["order_support (mock →<br/>ERP/OMS in production)"]
     end
 
     subgraph DATA["Postgres 16 + pgvector (one database)"]
@@ -154,9 +158,9 @@ sequenceDiagram
 - **Streaming chat** with tool-status pills ("Checking compatibility…") and a
   hold-and-validate final flush — tokens appear fast, invented part numbers never do.
 - **Rich blocks** rendered mid-stream: product cards (price, stock, difficulty,
-  rating, add-to-cart), compatibility verdicts (✓/⚠/✗ + evidence), ranked
+  rating), compatibility verdicts (✓/⚠/✗ + evidence), ranked
   diagnosis with expandable causes, install guides (difficulty, time, video,
-  real customer repair stories), order status timeline, cart drawer.
+  real customer repair stories).
 - **Chat-native navigation**: "Check fits my model" and "Install guide" buttons
   send templated messages — the conversation *is* the UI.
 - **Scope guard**: regex fast-path (no extra LLM call for obvious cases), cheap
@@ -183,7 +187,7 @@ sequenceDiagram
 | E2E | Playwright fix-it journey vs MOCK_LLM stack | `make e2e` |
 | Agent quality | 40-case eval harness | `make eval` |
 
-Backend coverage **87%** (CI gate ≥80%). Lint: ruff (+bandit rules) and
+Backend coverage **82%** (CI gate ≥80%). Lint: ruff (+bandit rules) and
 ruff-format, enforced by CI and pre-commit. CI: backend / frontend / e2e on
 every push; eval is a manual workflow (needs an LLM secret, costs money).
 
@@ -201,8 +205,6 @@ every push; eval is a manual workflow (needs an LLM secret, costs money).
 
 - **New appliance**: add seed URLs + the enum value in `scraper/seeds.py` and
   `tools.py`; the schema, agent, and UI don't change.
-- **Real order support**: replace `order_support`'s mocked body with the
-  OMS/ERP client — the Pydantic schema is already the contract.
 - **Swap LLM provider**: 3 env vars (`LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`)
   — anything OpenAI-compatible works (tested against the mock + OpenAI shapes).
 - **Scale path**: Postgres+pgvector already production-shaped; move sessions
@@ -217,9 +219,9 @@ every push; eval is a manual workflow (needs an LLM secret, costs money).
 - **Catalog slice** — 34 real parts (the build environment couldn't bulk-fetch
   raw HTML; `python -m scraper.scrape` scales the same pipeline to 150+ on a
   normal machine). All spec-critical records are present and real.
-- **Mocked order support**, single-locale USD pricing, in-memory sessions
-  (Redis swap noted above), committed seed currently embeds with the mock
-  hasher until a real embedding run replaces it.
+- Single-locale USD pricing, in-memory sessions (Redis swap noted above),
+  committed seed currently embeds with the mock hasher until a real embedding
+  run replaces it.
 
 ## How this was built
 

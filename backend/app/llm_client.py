@@ -90,13 +90,50 @@ class MockLLM:
         if call is not None:
             yield ("tool_calls", [call])
             return
-        text = (
+        text = self._clarifier_text(messages)
+        for i in range(0, len(text), 24):
+            yield ("token", text[i : i + 24])
+
+    @staticmethod
+    def _clarifier_text(messages: list[dict]) -> str:
+        """Context-aware fallback when no tool fires (mock-mode UX polish).
+
+        A real LLM would carry context naturally; in MOCK mode, give short
+        conversational follow-ups ('yes', 'refrigerator') a useful next-step
+        instead of looping the same generic prompt.
+        """
+        msg = messages[-1].get("content", "").strip().lower().rstrip("!?.,")
+        prior = next(
+            (
+                m["content"]
+                for m in reversed(messages[:-1])
+                if m.get("role") == "assistant" and m.get("content")
+            ),
+            "",
+        ).lower()
+        if re.fullmatch(r"(yes|yeah|yep|yup|sure|please|ok+|okay|y)", msg):
+            if "fits your model" in prior or "verify the right part" in prior:
+                return (
+                    "Great - what's your model number? It's usually on a sticker "
+                    "inside the door, on the side wall, or behind the kick plate."
+                )
+            if "install help" in prior or "step-by-step" in prior:
+                return "Sure - share the part number and I'll pull the install steps."
+            return (
+                "Got it - what would you like to do next? A part number, model "
+                "number, or a symptom all work."
+            )
+        if msg in {"refrigerator", "fridge", "dishwasher"}:
+            which = "fridge" if msg in {"refrigerator", "fridge"} else "dishwasher"
+            return (
+                f"Got it - a {which}. What's it doing? A symptom, part number, "
+                "or model number all work."
+            )
+        return (
             "Happy to help! Which appliance is acting up - your refrigerator "
             "or your dishwasher - and what is it doing? A part number or "
             "model number works too."
         )
-        for i in range(0, len(text), 24):
-            yield ("token", text[i : i + 24])
 
     def classify(self, prompt: str) -> str:
         from backend.app.guard import IN_SCOPE_RE, INJECTION_RE
@@ -134,17 +171,6 @@ class MockLLM:
             appliance = "dishwasher"
         elif appliance is None and re.search(r"fridge|refrigerat", hist_text(), re.I):
             appliance = "refrigerator"
-
-        if re.search(r"\b(order|refund|return|cancel|shipment|delivery status)\b", low):
-            m = re.search(r"\b(?:order\s*#?\s*)?(\d{6,12}|[A-Z]{2}\d{6,})\b", msg)
-            action = (
-                "return"
-                if "return" in low or "refund" in low
-                else "cancel"
-                if "cancel" in low
-                else "order_status"
-            )
-            return self._call("order_support", action=action, order_id=m.group(1) if m else None)
 
         model = None
         m = MODEL_HINT_RE.search(msg)
@@ -245,7 +271,7 @@ class MockLLM:
             if s == "verified_fit":
                 return (
                     f"Yes - {part} is a verified fit for model {model} per PartSelect's "
-                    "cross-reference data. Want install help or to add it to your cart?"
+                    "cross-reference data. Want install help?"
                 )
             if s == "no_match_found":
                 extra = ""

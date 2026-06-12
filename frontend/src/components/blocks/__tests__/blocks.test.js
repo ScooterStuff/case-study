@@ -3,7 +3,6 @@ import { render, screen } from "@testing-library/react";
 import ProductCard from "../ProductCard";
 import CompatResult from "../CompatResult";
 import Diagnosis from "../Diagnosis";
-import { CartProvider } from "../../../context/CartContext";
 
 const product = {
   ps_number: "PS3406971", mpn: "W10195416", brand: "Whirlpool",
@@ -12,7 +11,7 @@ const product = {
   image_url: "http://example.com/x.jpg", product_url: "http://example.com",
 };
 
-const wrap = (ui) => render(<CartProvider>{ui}</CartProvider>);
+const wrap = (ui) => render(ui);
 
 test("ProductCard shows price, stock badge and difficulty chip", () => {
   wrap(<ProductCard product={product} />);

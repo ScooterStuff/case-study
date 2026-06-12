@@ -1,8 +1,8 @@
 # ---- build -----------------------------------------------------------------
 FROM node:20-alpine AS build
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci --no-audit --no-fund
+COPY package.json ./
+RUN npm install --no-audit --no-fund
 COPY public ./public
 COPY src ./src
 ENV CI=true

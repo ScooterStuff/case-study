@@ -5,9 +5,7 @@ component. Tool *facts* come exclusively from the Phase 2 retrieval layer.
 
 from __future__ import annotations
 
-import hashlib
 import re
-from datetime import date, timedelta
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -46,12 +44,6 @@ class DiagnoseIn(BaseModel):
 
 class InstallGuideIn(BaseModel):
     part_identifier: str
-
-
-class OrderSupportIn(BaseModel):
-    action: Literal["order_status", "return", "cancel"]
-    order_id: str | None = None
-    email: str | None = None
 
 
 # ------------------------------------------------------------------- helpers
@@ -210,35 +202,6 @@ def get_installation_guide(part_identifier: str) -> dict:
     }
 
 
-def order_support(action: str, order_id: str | None = None, email: str | None = None) -> dict:
-    """MOCK: deterministic fake order data keyed on a hash of order_id.
-    In production this body is replaced by an ERP/OMS API call - the input/output
-    schema is the contract; nothing else changes."""
-    if not order_id:
-        return {
-            "data": {
-                "needs": "order_id",
-                "note": "Ask the customer for their order number (and the email on the order).",
-            },
-            "ui_block": None,
-        }
-    h = int(hashlib.md5(order_id.encode(), usedforsecurity=False).hexdigest(), 16)
-    status = ["processing", "shipped", "in transit", "delivered"][h % 4]
-    eta = (date(2026, 6, 10) + timedelta(days=h % 5 + 1)).isoformat()
-    data = {
-        "order_id": order_id,
-        "status": status,
-        "eta": None if status == "delivered" else eta,
-        "carrier": ["UPS", "FedEx", "USPS"][h % 3],
-    }
-    if action == "return":
-        data["return_policy"] = "365-day returns; a prepaid label will be emailed."
-        data["return_started"] = True
-    if action == "cancel":
-        data["cancellable"] = status == "processing"
-    return {"data": data, "ui_block": {"type": "order_status", **data}}
-
-
 # ----------------------------------------------------------- registry/schema
 
 TOOLS = {
@@ -265,12 +228,7 @@ TOOLS = {
     "get_installation_guide": (
         get_installation_guide,
         InstallGuideIn,
-        "Installation difficulty, time, video and real customer repair stories for a part.",
-    ),
-    "order_support": (
-        order_support,
-        OrderSupportIn,
-        "Order status / returns / cancellation (requires order_id).",
+        "Installation difficulty, time, video and real customer repair stories for a part."
     ),
 }
 
@@ -280,7 +238,6 @@ FRIENDLY_LABELS = {
     "check_compatibility": "Checking compatibility…",
     "diagnose_issue": "Diagnosing the issue…",
     "get_installation_guide": "Fetching install help…",
-    "order_support": "Checking your order…",
 }
 
 

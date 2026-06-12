@@ -5,8 +5,8 @@ import ProductCard, { ProductList } from "./blocks/ProductCard";
 import CompatResult from "./blocks/CompatResult";
 import Diagnosis from "./blocks/Diagnosis";
 import InstallGuide from "./blocks/InstallGuide";
-import OrderStatus from "./blocks/OrderStatus";
 import ModelHelpModal from "./ModelHelpModal";
+import PhotoUploader from "./PhotoUploader";
 
 // The exact spec queries are seeded as suggestion chips on purpose.
 const SUGGESTIONS = [
@@ -29,7 +29,6 @@ function Block({ block, onSend }) {
     case "compat_result": return <CompatResult block={block} onSend={onSend} />;
     case "diagnosis": return <Diagnosis block={block} onSend={onSend} />;
     case "install_guide": return <InstallGuide block={block} />;
-    case "order_status": return <OrderStatus block={block} />;
     default: return null;
   }
 }
@@ -94,12 +93,27 @@ export default function ChatWindow() {
     }
   };
 
-  const stop = () => abortRef.current?.abort();
+  const stop = () => {
+    abortRef.current?.abort();
+  };
 
   const reset = () => {
     stop();
     setSessionId(newSession());
     setMessages([]);
+  };
+
+  const handleDetectedModel = (model) => {
+    if (!model) return;
+    // Smart prefill: if the user has already discussed a part, propose a
+    // compatibility check; otherwise propose a parts search for the model.
+    const conv = messages.map((m) => m.text).join(" ");
+    const ps = (conv.match(/PS\d{5,9}/i) || [])[0];
+    const draft = ps
+      ? `Is part ${ps.toUpperCase()} compatible with my ${model}?`
+      : `My model number is ${model} — what parts do you stock for it?`;
+    setInput(draft);
+    composerRef.current?.focus();
   };
 
   return (
@@ -155,6 +169,7 @@ export default function ChatWindow() {
             if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
           }}
         />
+        <PhotoUploader disabled={busy} onModelDetected={handleDetectedModel} />
         {busy
           ? <button type="button" className="btn btn-outline" onClick={stop}>Stop</button>
           : <button type="submit" className="btn btn-teal" disabled={!input.trim()}>Send</button>}

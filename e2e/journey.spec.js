@@ -1,9 +1,8 @@
 // The one e2e test: the full fix-it journey against the MOCK_LLM backend.
-// symptom -> diagnosis block -> check a part fits a model -> verdict block ->
-// add to cart -> badge increments.
+// symptom -> diagnosis block -> check a part fits a model -> verdict block.
 const { test, expect } = require("@playwright/test");
 
-test("fix-it journey: diagnose -> compatibility -> cart", async ({ page }) => {
+test("fix-it journey: diagnose -> compatibility -> deflection", async ({ page }) => {
   await page.goto("/");
 
   // 1. symptom -> diagnosis card with ranked causes + suggested parts
@@ -24,15 +23,10 @@ test("fix-it journey: diagnose -> compatibility -> cart", async ({ page }) => {
   await expect(verdict).toBeVisible({ timeout: 15000 });
   await expect(verdict.locator(".compat-title")).not.toBeEmpty();
 
-  // 3. add to cart -> badge increments, drawer shows the line item
-  await page.locator(".product-card").first().getByRole("button", { name: "Add to cart" }).click();
-  await expect(page.locator(".cart-badge")).toHaveText("1");
-  await expect(page.locator(".drawer .cart-line")).toHaveCount(1);
-
-  // 4. off-topic question renders a graceful deflection (no broken blocks)
-  await page.locator(".drawer-overlay").click({ position: { x: 10, y: 10 } });
+  // 3. off-topic question renders a graceful deflection (no broken blocks)
   await box.fill("What is the capital of France?");
   await box.press("Enter");
   await expect(page.locator(".msg.assistant").last()).toContainText(/parts|fridge|dishwasher/i,
     { timeout: 15000 });
 });
+

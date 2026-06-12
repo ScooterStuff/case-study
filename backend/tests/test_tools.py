@@ -53,14 +53,6 @@ def test_install_guide() -> None:
     assert out["ui_block"]["type"] == "install_guide"
 
 
-def test_order_support_deterministic_mock() -> None:
-    a = tools.run_tool("order_support", {"action": "order_status", "order_id": "123456"})
-    b = tools.run_tool("order_support", {"action": "order_status", "order_id": "123456"})
-    assert a["data"] == b["data"]
-    ask = tools.run_tool("order_support", {"action": "order_status"})
-    assert ask["data"]["needs"] == "order_id"
-
-
 def test_malformed_input_raises_validation_error() -> None:
     with pytest.raises(pydantic.ValidationError):
         tools.run_tool("diagnose_issue", {"symptom_description": "x", "appliance_type": "spaceship"})

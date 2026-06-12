@@ -2,7 +2,6 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ChatWindow from "../ChatWindow";
-import { CartProvider } from "../../context/CartContext";
 
 jest.mock("../../lib/api", () => ({
   streamChat: jest.fn().mockResolvedValue(undefined),
@@ -11,7 +10,7 @@ jest.mock("../../lib/api", () => ({
 }));
 const { streamChat } = require("../../lib/api");
 
-const setup = () => render(<CartProvider><ChatWindow /></CartProvider>);
+const setup = () => render(<ChatWindow />);
 
 beforeEach(() => streamChat.mockClear());
 
@@ -36,4 +35,9 @@ test("suggested spec-query chips send on click", async () => {
   await userEvent.click(screen.getByText("How can I install part number PS11752778?"));
   expect(streamChat).toHaveBeenCalledTimes(1);
   expect(streamChat.mock.calls[0][1]).toMatch(/PS11752778/);
+});
+
+test("photo upload button is rendered in the composer", () => {
+  setup();
+  expect(screen.getByLabelText(/Upload a photo/i)).toBeInTheDocument();
 });
