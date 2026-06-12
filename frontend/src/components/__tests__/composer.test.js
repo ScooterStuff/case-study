@@ -32,7 +32,9 @@ test("Shift+Enter inserts a newline instead of sending", async () => {
 
 test("suggested spec-query chips send on click", async () => {
   setup();
-  await userEvent.click(screen.getByText("How can I install part number PS11752778?"));
+  await userEvent.click(
+    screen.getByText("How can I install part number PS11752778?"),
+  );
   expect(streamChat).toHaveBeenCalledTimes(1);
   expect(streamChat.mock.calls[0][1]).toMatch(/PS11752778/);
 });

@@ -23,13 +23,25 @@ const GREETING =
 
 function Block({ block, onSend }) {
   switch (block.type) {
-    case "product_list": return <ProductList products={block.products} onSend={onSend} />;
-    case "product_card": return <ProductCard product={block.product} description={block.description}
-                                             symptoms={block.symptoms} onSend={onSend} />;
-    case "compat_result": return <CompatResult block={block} onSend={onSend} />;
-    case "diagnosis": return <Diagnosis block={block} onSend={onSend} />;
-    case "install_guide": return <InstallGuide block={block} />;
-    default: return null;
+    case "product_list":
+      return <ProductList products={block.products} onSend={onSend} />;
+    case "product_card":
+      return (
+        <ProductCard
+          product={block.product}
+          description={block.description}
+          symptoms={block.symptoms}
+          onSend={onSend}
+        />
+      );
+    case "compat_result":
+      return <CompatResult block={block} onSend={onSend} />;
+    case "diagnosis":
+      return <Diagnosis block={block} onSend={onSend} />;
+    case "install_guide":
+      return <InstallGuide block={block} />;
+    default:
+      return null;
   }
 }
 
@@ -37,8 +49,11 @@ function Prose({ text, streaming }) {
   // NOTE: agent output is markdown from our own backend; marked + this app's
   // CSP is acceptable for the case study (template used the same approach).
   return (
-    <div className="prose" dangerouslySetInnerHTML={{ __html: marked.parse(text || "") }}
-         data-streaming={streaming || undefined} />
+    <div
+      className="prose"
+      dangerouslySetInnerHTML={{ __html: marked.parse(text || "") }}
+      data-streaming={streaming || undefined}
+    />
   );
 }
 
@@ -48,17 +63,30 @@ function Prose({ text, streaming }) {
 function TracePanel({ trace }) {
   const [open, setOpen] = useState(false);
   if (!trace) return null;
-  const { calls = [], mentioned_ps = [], verified_ps = [], stripped_ps = [] } = trace;
+  const {
+    calls = [],
+    mentioned_ps = [],
+    verified_ps = [],
+    stripped_ps = [],
+  } = trace;
   if (!calls.length && !mentioned_ps.length) return null;
   const verifiedSet = new Set(verified_ps);
   const strippedSet = new Set(stripped_ps);
   return (
-    <details className="trace" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
+    <details
+      className="trace"
+      open={open}
+      onToggle={(e) => setOpen(e.currentTarget.open)}
+    >
       <summary className="trace-toggle">
         How I know this
         <span className="trace-meta">
-          {calls.length ? `${calls.length} tool call${calls.length === 1 ? "" : "s"}` : "no tools"}
-          {mentioned_ps.length ? ` · ${verified_ps.length}/${mentioned_ps.length} PS# verified` : ""}
+          {calls.length
+            ? `${calls.length} tool call${calls.length === 1 ? "" : "s"}`
+            : "no tools"}
+          {mentioned_ps.length
+            ? ` · ${verified_ps.length}/${mentioned_ps.length} PS# verified`
+            : ""}
         </span>
       </summary>
       <div className="trace-body">
@@ -67,9 +95,16 @@ function TracePanel({ trace }) {
             {calls.map((c, i) => (
               <li key={i}>
                 <code className="trace-name">{c.name}</code>
-                <span className="trace-args">({Object.entries(c.args || {})
-                  .map(([k, v]) => `${k}=${typeof v === "string" ? `"${v}"` : JSON.stringify(v)}`)
-                  .join(", ")})</span>
+                <span className="trace-args">
+                  (
+                  {Object.entries(c.args || {})
+                    .map(
+                      ([k, v]) =>
+                        `${k}=${typeof v === "string" ? `"${v}"` : JSON.stringify(v)}`,
+                    )
+                    .join(", ")}
+                  )
+                </span>
                 <span className="trace-arrow"> → </span>
                 <span className="trace-summary">{c.summary}</span>
               </li>
@@ -80,10 +115,19 @@ function TracePanel({ trace }) {
           <div className="trace-validator">
             <span className="trace-label">Validator:</span>
             {mentioned_ps.map((ps) => {
-              const status = strippedSet.has(ps) ? "stripped" : verifiedSet.has(ps) ? "verified" : "unknown";
-              const mark = status === "verified" ? "✓" : status === "stripped" ? "✗" : "•";
+              const status = strippedSet.has(ps)
+                ? "stripped"
+                : verifiedSet.has(ps)
+                  ? "verified"
+                  : "unknown";
+              const mark =
+                status === "verified" ? "✓" : status === "stripped" ? "✗" : "•";
               return (
-                <span key={ps} className={`trace-ps trace-ps-${status}`} title={status}>
+                <span
+                  key={ps}
+                  className={`trace-ps trace-ps-${status}`}
+                  title={status}
+                >
                   {mark} {ps}
                 </span>
               );
@@ -97,7 +141,7 @@ function TracePanel({ trace }) {
 
 export default function ChatWindow() {
   const [sessionId, setSessionId] = useState(getSessionId);
-  const [messages, setMessages] = useState([]);   // {role, text, blocks[], pills[], error}
+  const [messages, setMessages] = useState([]); // {role, text, blocks[], pills[], error}
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -121,25 +165,47 @@ export default function ChatWindow() {
     if (!message || busy) return;
     setInput("");
     setBusy(true);
-    setMessages((prev) => [...prev,
+    setMessages((prev) => [
+      ...prev,
       { role: "user", text: message },
-      { role: "assistant", text: "", blocks: [], pills: [], trace: null }]);
+      { role: "assistant", text: "", blocks: [], pills: [], trace: null },
+    ]);
     const controller = new AbortController();
     abortRef.current = controller;
     try {
-      await streamChat(sessionId, message, {
-        token: (d) => patchLast((m) => ({ ...m, text: m.text + d.delta })),
-        tool_start: (d) => patchLast((m) => ({ ...m, pills: [...m.pills, d] })),
-        tool_end: (d) => patchLast((m) => ({ ...m, pills: m.pills.filter((p) => p.name !== d.name) })),
-        tool_error: (d) => patchLast((m) => ({ ...m, pills: m.pills.filter((p) => p.name !== d.name) })),
-        ui_block: (d) => patchLast((m) => ({ ...m, blocks: [...m.blocks, d] })),
-        trace: (d) => patchLast((m) => ({ ...m, trace: d })),
-        done: () => patchLast((m) => ({ ...m, pills: [] })),
-      }, controller.signal);
+      await streamChat(
+        sessionId,
+        message,
+        {
+          token: (d) => patchLast((m) => ({ ...m, text: m.text + d.delta })),
+          tool_start: (d) =>
+            patchLast((m) => ({ ...m, pills: [...m.pills, d] })),
+          tool_end: (d) =>
+            patchLast((m) => ({
+              ...m,
+              pills: m.pills.filter((p) => p.name !== d.name),
+            })),
+          tool_error: (d) =>
+            patchLast((m) => ({
+              ...m,
+              pills: m.pills.filter((p) => p.name !== d.name),
+            })),
+          ui_block: (d) =>
+            patchLast((m) => ({ ...m, blocks: [...m.blocks, d] })),
+          trace: (d) => patchLast((m) => ({ ...m, trace: d })),
+          done: () => patchLast((m) => ({ ...m, pills: [] })),
+        },
+        controller.signal,
+      );
     } catch (err) {
       if (err.name !== "AbortError") {
-        patchLast((m) => ({ ...m, error: true,
-          text: m.text || "I couldn't reach the parts service. Is the backend running?" }));
+        patchLast((m) => ({
+          ...m,
+          error: true,
+          text:
+            m.text ||
+            "I couldn't reach the parts service. Is the backend running?",
+        }));
       }
     } finally {
       setBusy(false);
@@ -180,10 +246,19 @@ export default function ChatWindow() {
             <>
               <div className="chip-row suggestions">
                 {SUGGESTIONS.map((s) => (
-                  <button key={s} className="chip chip-btn" onClick={() => send(s)}>{s}</button>
+                  <button
+                    key={s}
+                    className="chip chip-btn"
+                    onClick={() => send(s)}
+                  >
+                    {s}
+                  </button>
                 ))}
               </div>
-              <button className="btn btn-link small" onClick={() => setHelpOpen(true)}>
+              <button
+                className="btn btn-link small"
+                onClick={() => setHelpOpen(true)}
+              >
                 Where do I find my model number?
               </button>
             </>
@@ -194,17 +269,30 @@ export default function ChatWindow() {
             {m.pills?.length > 0 && (
               <div className="pills">
                 {m.pills.map((p) => (
-                  <span key={p.name} className="pill"><span className="spinner" aria-hidden="true" />{p.label}</span>
+                  <span key={p.name} className="pill">
+                    <span className="spinner" aria-hidden="true" />
+                    {p.label}
+                  </span>
                 ))}
               </div>
             )}
-            {m.blocks?.map((b, j) => <Block key={j} block={b} onSend={send} />)}
-            {m.role === "assistant"
-              ? <Prose text={m.text} streaming={busy && i === messages.length - 1} />
-              : <div className="user-text">{m.text}</div>}
+            {m.blocks?.map((b, j) => (
+              <Block key={j} block={b} onSend={send} />
+            ))}
+            {m.role === "assistant" ? (
+              <Prose
+                text={m.text}
+                streaming={busy && i === messages.length - 1}
+              />
+            ) : (
+              <div className="user-text">{m.text}</div>
+            )}
             {m.role === "assistant" && <TracePanel trace={m.trace} />}
             {m.error && (
-              <button className="btn btn-outline small" onClick={() => send(messages[i - 1]?.text)}>
+              <button
+                className="btn btn-outline small"
+                onClick={() => send(messages[i - 1]?.text)}
+              >
                 Retry
               </button>
             )}
@@ -213,7 +301,13 @@ export default function ChatWindow() {
         <div ref={endRef} />
       </div>
 
-      <form className="composer" onSubmit={(e) => { e.preventDefault(); send(); }}>
+      <form
+        className="composer"
+        onSubmit={(e) => {
+          e.preventDefault();
+          send();
+        }}
+      >
         <textarea
           ref={composerRef}
           value={input}
@@ -222,14 +316,32 @@ export default function ChatWindow() {
           aria-label="Message"
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              send();
+            }
           }}
         />
         <PhotoUploader disabled={busy} onModelDetected={handleDetectedModel} />
-        {busy
-          ? <button type="button" className="btn btn-outline" onClick={stop}>Stop</button>
-          : <button type="submit" className="btn btn-teal" disabled={!input.trim()}>Send</button>}
-        <button type="button" className="btn btn-link" onClick={reset} title="Start a new conversation">
+        {busy ? (
+          <button type="button" className="btn btn-outline" onClick={stop}>
+            Stop
+          </button>
+        ) : (
+          <button
+            type="submit"
+            className="btn btn-teal"
+            disabled={!input.trim()}
+          >
+            Send
+          </button>
+        )}
+        <button
+          type="button"
+          className="btn btn-link"
+          onClick={reset}
+          title="Start a new conversation"
+        >
           New chat
         </button>
       </form>

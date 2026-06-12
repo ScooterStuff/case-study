@@ -28,7 +28,11 @@ export async function streamChat(sessionId, message, handlers, signal) {
       if (line.startsWith("event:")) event = line.slice(6).trim();
       else if (line.startsWith("data:") && line !== "data:") {
         let data;
-        try { data = JSON.parse(line.slice(5)); } catch { continue; }
+        try {
+          data = JSON.parse(line.slice(5));
+        } catch {
+          continue;
+        }
         handlers[event]?.(data);
       }
     }

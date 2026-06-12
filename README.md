@@ -33,7 +33,7 @@ make dev
 Try the three canonical queries (also seeded as suggestion chips in the UI):
 
 1. `How can I install part number PS11752778?`
-2. `Is this part compatible with my WDT780SAEM1 model?` *(as a follow-up — pronouns resolve)*
+2. `Is this part compatible with my WDT780SAEM1 model?` _(as a follow-up — pronouns resolve)_
 3. `The ice maker on my Whirlpool fridge is not working. How can I fix it?`
 
 ### Photo → model number (you're elbows-deep in a dishwasher)
@@ -52,12 +52,10 @@ The agent is **measured**, not vibes-checked: a 40-case harness replays
 multi-turn conversations through the live SSE API and asserts tool selection,
 answer content, scope behavior, and a mechanical hallucination check.
 
-
-
 Full per-case table and methodology: [`eval/RESULTS.md`](eval/RESULTS.md) ·
 cases: [`eval/cases.json`](eval/cases.json). Regenerate with `make eval`.
-*The committed table is from the scripted `MOCK_LLM` client (provenance is in
-the table's metadata line); re-run with your key for real-model numbers.*
+_The committed table is from the scripted `MOCK_LLM` client (provenance is in
+the table's metadata line); re-run with your key for real-model numbers._
 
 ## Architecture
 
@@ -74,7 +72,7 @@ come from a tool result. The tool registry is the extension point: a new
 appliance is new data plus an enum value.
 
 **Compatibility is a database join, never an LLM guess** — and the data layer is
-honest about its limits: a miss is reported as *"not in our verified list"*
+honest about its limits: a miss is reported as _"not in our verified list"_
 (the scraped cross-reference is partial), never a hard "incompatible".
 
 ```mermaid
@@ -166,7 +164,7 @@ sequenceDiagram
   diagnosis with expandable causes, install guides (difficulty, time, video,
   real customer repair stories).
 - **Chat-native navigation**: "Check fits my model" and "Install guide" buttons
-  send templated messages — the conversation *is* the UI.
+  send templated messages — the conversation _is_ the UI.
 - **Scope guard**: regex fast-path (no extra LLM call for obvious cases), cheap
   classifier for the rest, graceful on-brand deflections, injection handling
   (embedded payloads are ignored while the legitimate question is answered).
@@ -180,15 +178,15 @@ sequenceDiagram
 
 ## Testing & quality
 
-> Evals measure whether the *agent* is right; tests measure whether the *code*
+> Evals measure whether the _agent_ is right; tests measure whether the _code_
 > is correct. They're separate layers on purpose.
 
-| Layer | What | Run |
-|---|---|---|
-| Unit (many) | parsers, retrieval SQL, guard, validator, tools, agent loop | `make test` |
-| Integration | FastAPI TestClient over real Postgres+pgvector (embedded `pgserver`) | `make test` |
-| Frontend | Jest + RTL: blocks, SSE chunk-reassembly, composer keys | `make test` |
-| Agent quality | 40-case eval harness | `make eval` |
+| Layer         | What                                                                 | Run         |
+| ------------- | -------------------------------------------------------------------- | ----------- |
+| Unit (many)   | parsers, retrieval SQL, guard, validator, tools, agent loop          | `make test` |
+| Integration   | FastAPI TestClient over real Postgres+pgvector (embedded `pgserver`) | `make test` |
+| Frontend      | Jest + RTL: blocks, SSE chunk-reassembly, composer keys              | `make test` |
+| Agent quality | 40-case eval harness                                                 | `make eval` |
 
 Backend coverage **83%** (CI gate ≥80%). Lint: ruff (+bandit rules) and
 ruff-format, enforced by CI and pre-commit. CI: backend / frontend on
@@ -196,13 +194,17 @@ every push; eval is a manual workflow (needs an LLM secret, costs money).
 
 ## Design decisions (full log: [`playbook/TRADEOFFS.md`](playbook/TRADEOFFS.md))
 
-| Decision | Why | Revisit when |
-|---|---|---|
-| One Postgres for facts **and** vectors | semantic hits JOIN price/stock in-db; one `up` | ~1M embeddings |
-| Raw SQL, no ORM | ~10 queries; the SQL *is* the architecture demo | schema churn 3× |
-| Single agent + tool registry (no multi-agent) | lower latency, simpler failures, easier evals | tools stop fitting one prompt |
-| Buffer-and-release final prose | mechanical zero-hallucination guarantee beats ~100ms | sub-100ms budgets |
-| Two-mode LLM/embeddings (real / scripted mock) | keyless CI + demos; rails provable without spend | never — it's free |
+> Library-level choices (FastAPI vs Flask, pgvector vs Pinecone, Tesseract.js
+> vs cloud OCR, …) and what would make us revisit them are catalogued in
+> [`docs/TECH_STACK.md`](docs/TECH_STACK.md).
+
+| Decision                                       | Why                                                  | Revisit when                  |
+| ---------------------------------------------- | ---------------------------------------------------- | ----------------------------- |
+| One Postgres for facts **and** vectors         | semantic hits JOIN price/stock in-db; one `up`       | ~1M embeddings                |
+| Raw SQL, no ORM                                | ~10 queries; the SQL _is_ the architecture demo      | schema churn 3×               |
+| Single agent + tool registry (no multi-agent)  | lower latency, simpler failures, easier evals        | tools stop fitting one prompt |
+| Buffer-and-release final prose                 | mechanical zero-hallucination guarantee beats ~100ms | sub-100ms budgets             |
+| Two-mode LLM/embeddings (real / scripted mock) | keyless CI + demos; rails provable without spend     | never — it's free             |
 
 ## Extensibility
 
@@ -220,7 +222,7 @@ every push; eval is a manual workflow (needs an LLM secret, costs money).
 
 - **Partial compatibility data** — PartSelect's cross-reference tables are
   paginated; the scrape keeps the first page per part, so verdicts are
-  "verified fit" vs "not in our *verified* list", never a hard no. By design.
+  "verified fit" vs "not in our _verified_ list", never a hard no. By design.
 - **Catalog slice** — 34 real parts (the build environment couldn't bulk-fetch
   raw HTML; `python -m scraper.scrape` scales the same pipeline to 150+ on a
   normal machine). All spec-critical records are present and real.

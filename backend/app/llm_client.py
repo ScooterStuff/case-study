@@ -15,6 +15,31 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 from backend.app import config
+from backend.app.appliances import ALL_KEYWORDS, APPLIANCES, KEYWORDS, display_list
+
+# Appliance detection for MockLLM is derived from appliances.toml — adding a
+# new appliance there (name + keywords) auto-extends the mock router, the
+# bare-appliance clarifier, and the closing line. Internal whitespace in a
+# keyword is treated as optional, so 'dish rack' matches 'dishrack' too.
+def _kw_pattern(kw: str) -> str:
+    parts = re.split(r"\s+", kw.strip())
+    return r"\s*".join(re.escape(p) for p in parts)
+
+
+_APPLIANCE_REGEXES: dict[str, re.Pattern[str]] = {
+    name: re.compile("|".join(_kw_pattern(k) for k in kws), re.I) for name, kws in KEYWORDS.items()
+}
+_APPLIANCE_WORDS: frozenset[str] = frozenset(
+    {a.lower() for a in APPLIANCES} | {k.lower() for k in ALL_KEYWORDS}
+)
+
+
+def _detect_appliance(text: str) -> str | None:
+    """Return the canonical appliance name whose keywords first match `text`."""
+    for name, rx in _APPLIANCE_REGEXES.items():
+        if rx.search(text):
+            return name
+    return None
 
 
 class RealLLM:
@@ -122,12 +147,12 @@ class MockLLM:
             return (
                 "Got it - what would you like to do next? A part number, model number, or a symptom all work."
             )
-        if msg in {"refrigerator", "fridge", "dishwasher"}:
-            which = "fridge" if msg in {"refrigerator", "fridge"} else "dishwasher"
+        if msg in _APPLIANCE_WORDS:
+            which = _detect_appliance(msg) or msg
             return f"Got it - a {which}. What's it doing? A symptom, part number, or model number all work."
         return (
-            "Happy to help! Which appliance is acting up - your refrigerator "
-            "or your dishwasher - and what is it doing? A part number or "
+            f"Happy to help! Which appliance is acting up - your "
+            f"{display_list(' or ')} - and what is it doing? A part number or "
             "model number works too."
         )
 
@@ -156,17 +181,7 @@ class MockLLM:
             prev = PS_RE.findall(hist_text())
             ps = prev[-1].upper() if prev else None
 
-        appliance = (
-            "dishwasher"
-            if re.search(r"dish ?wash", low)
-            else "refrigerator"
-            if re.search(r"fridge|refrigerat|freezer|ice maker|icemaker", low)
-            else None
-        )
-        if appliance is None and re.search(r"dish ?wash", hist_text(), re.I):
-            appliance = "dishwasher"
-        elif appliance is None and re.search(r"fridge|refrigerat", hist_text(), re.I):
-            appliance = "refrigerator"
+        appliance = _detect_appliance(low) or _detect_appliance(hist_text())
 
         model = None
         m = MODEL_HINT_RE.search(msg)
@@ -325,7 +340,7 @@ class MockLLM:
                 lines.append(f"• {p['title']} ({p['ps_number']}){price}, {p.get('availability', '')}")
             lines.append("Share your model number and I'll confirm which one fits.")
             return "\n".join(lines)
-        return "Done - anything else fridge- or dishwasher-related I can help with?"
+        return f"Done - anything else {display_list(' or ')}-related I can help with?"
 
 
 def get_client():

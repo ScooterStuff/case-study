@@ -75,12 +75,13 @@ def test_route_pronoun_resolves_ps_from_history() -> None:
 def test_clarifier_when_no_tool_matches() -> None:
     """Conversational follow-ups ('yes', bare appliance name) get a useful next-step,
     not the same generic prompt every time."""
+    from backend.app.appliances import APPLIANCES
     from backend.app.llm_client import MockLLM
 
-    # bare appliance name -> tailored clarifier
+    # bare appliance name -> tailored clarifier (echoes the canonical appliance)
     out = _drain(MockLLM(), _user("refrigerator"))
     text = "".join(p for k, p in out if k == "token")
-    assert "fridge" in text and "symptom" in text
+    assert any(name in text for name in APPLIANCES) and "symptom" in text
 
     # "yes" after a fit-check offer -> ask for the model number
     history = [{"role": "assistant", "content": "Want me to check it fits your model?"}]
