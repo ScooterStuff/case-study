@@ -61,7 +61,7 @@
     <rect x="915" y="372" width="170" height="54" rx="8" fill="#FFFFFF" stroke="#337778"/><text x="1000" y="396" text-anchor="middle">check_compatibility</text><text x="1000" y="415" font-size="11.5" fill="#555453" text-anchor="middle">SQL JOIN, 4-state verdict</text>
     <rect x="545" y="440" width="170" height="54" rx="8" fill="#FFFFFF" stroke="#337778"/><text x="630" y="464" text-anchor="middle">diagnose_issue</text><text x="630" y="483" font-size="11.5" fill="#555453" text-anchor="middle">RAG → ranked causes</text>
     <rect x="730" y="440" width="170" height="54" rx="8" fill="#FFFFFF" stroke="#337778"/><text x="815" y="464" text-anchor="middle">get_installation_guide</text><text x="815" y="483" font-size="11.5" fill="#555453" text-anchor="middle">difficulty · video · stories</text>
-    <rect x="915" y="440" width="170" height="54" rx="8" fill="#FFFFFF" stroke="#337778"/><text x="1000" y="464" text-anchor="middle">order_support</text><text x="1000" y="483" font-size="11.5" fill="#555453" text-anchor="middle">mock → ERP/OMS later</text>
+    <rect x="915" y="440" width="170" height="54" rx="8" fill="none" stroke="#9AA6A5" stroke-dasharray="6 4"/><text x="1000" y="464" text-anchor="middle" fill="#777">your next tool</text><text x="1000" y="483" font-size="11.5" fill="#999" text-anchor="middle">registry entry only</text>
   </g>
   <line x1="835" y1="285" x2="835" y2="313" stroke="#337778" stroke-width="3" marker-end="url(#a)"/>
 
