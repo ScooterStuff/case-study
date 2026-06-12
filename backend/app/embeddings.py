@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import math
 import re
+from functools import lru_cache
 
 from backend.app import config
 
@@ -36,5 +37,23 @@ def embed_batch(texts: list[str]) -> list[list[float]]:
     return out
 
 
+@lru_cache(maxsize=1024)
+def _embed_one_cached(text: str, model: str, mock: bool) -> tuple[float, ...]:
+    # Cache key includes model + mock flag so swapping either invalidates entries.
+    # Tuple return type is hashable + immutable; callers wrap back to list.
+    return tuple(embed_batch([text])[0])
+
+
 def embed_one(text: str) -> list[float]:
-    return embed_batch([text])[0]
+    """Single-text embed with an LRU cache (1024 distinct queries).
+
+    Only used for *query-time* embedding (retrieval.py); ingest goes through
+    embed_batch directly so unique docs never thrash the cache.
+    """
+    return list(
+        _embed_one_cached(
+            text,
+            config.settings.embedding_model,
+            config.settings.mock_embeddings,
+        )
+    )
