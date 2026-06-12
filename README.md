@@ -13,7 +13,25 @@ Scoped to **refrigerator and dishwasher parts**: diagnose a symptom, find the
 right part, verify it fits your model, and get install help — in one
 conversation, with rich in-chat components and zero invented part numbers.
 
-## Quickstart
+## What it does
+
+The agent handles four kinds of question end-to-end:
+
+- **Installation** — _"How do I install PS11752778?"_ → an install-guide block with difficulty, time, an embedded video, and real customer repair stories.
+- **Compatibility** — _"Does this part fit my WDT780SAEM1?"_ → a SQL-join verdict (✓ verified / ⚠ not-in-our-list / ❌ wrong-appliance) with the evidence the verdict is based on.
+- **Diagnosis** — _"Ice maker on my Whirlpool fridge isn't working"_ → ranked causes from real repair guides, with suggested parts and a path into a compatibility check.
+- **Product search** — _"Lower spray arm for my dishwasher"_ → product cards with real prices, real stock, and install difficulty.
+
+Plus the small things that make it feel like a real repair companion:
+
+- 📷 **Photo → model number** — snap the appliance sticker; client-side OCR (Tesseract.js, lazy-loaded) extracts the model number and pre-fills the next message as a parts search _or_ a compatibility check, depending on the conversation so far.
+- 🔍 **"How I know this" trace** — every assistant message has a collapsible "explainability" panel: which tools the agent called, the exact arguments it sent, a one-line summary of each result, and the validator's verdict on every part number mentioned (✓ verified, ✗ stripped, • unknown). Built for developers and reviewers — black-box bots ask for trust; this earns it on purpose, and turns the demo into its own debug log.
+- 🛡️ **Stays on topic** — politely deflects out-of-scope questions, redirects other-appliance ones, and ignores prompt-injection payloads while still answering any legitimate question buried inside.
+- ⚡ **Streams** — tool pills show progress ("Checking compatibility…"), rich blocks render mid-stream, tokens appear fast — and fabricated part numbers never do.
+
+The catalog is **120 real parts** scraped from PartSelect.com across four brands (Whirlpool, GE, Frigidaire, LG), with **3.7k compatibility rows** and **95 ranked diagnosis causes**. Prices and stock are real.
+
+## Setup
 
 Datasets and a database seed are **pre-committed** — no scraping and no
 embedding key needed to run (`ingest.py --load-seed` happens automatically).
@@ -30,21 +48,38 @@ docker compose up -d db && make ingest
 make dev
 ```
 
-Try the three canonical queries (also seeded as suggestion chips in the UI):
+**Prerequisites** — Docker Desktop, or for local dev: Python 3.11+, Node 18+,
+and `make`. An OpenAI-compatible LLM key is _optional_ — `MOCK_LLM=1` ships a
+deterministic scripted client for keyless demos and CI.
+
+## Usage
+
+Three canonical queries (also seeded as suggestion chips in the UI):
 
 1. `How can I install part number PS11752778?`
-2. `Is this part compatible with my WDT780SAEM1 model?` _(as a follow-up — pronouns resolve)_
+2. `Is this part compatible with my WDT780SAEM1 model?` _(as a follow-up — "this part" resolves from history)_
 3. `The ice maker on my Whirlpool fridge is not working. How can I fix it?`
 
-### Photo → model number (you're elbows-deep in a dishwasher)
+Other query shapes that work:
 
-An extra button in the composer turns the UX into a real repair companion:
+- Natural-language description: _"the thing that sprays water in the bottom of my dishwasher"_
+- Symptom only: _"my dishwasher is not draining"_
+- Part type + brand: _"GE refrigerator water filter"_
+- Compatibility for any PS#: _"does PS3406971 fit a Whirlpool WDT780SAEM1?"_
 
-- 📷 **Photo → model number** — snap or upload the appliance sticker; client-side OCR (Tesseract.js, lazy-loaded so the bundle isn't paid up-front) extracts the model number and pre-fills the next message as either a parts search or a compatibility check, depending on the conversation so far.
+The composer also exposes a 📷 photo-OCR button, and every assistant message
+has a **"How I know this"** toggle showing the agent's trace.
 
-### "How I know this" (honesty trace)
+## How it works
 
-Every assistant message has a collapsible **trace panel** showing exactly which tools the agent called, the inputs it sent, a one-line summary of each result, and the validator's verdict on every part number mentioned (✓ verified, ✗ stripped, • unknown). Most chatbots ask for trust; this earns it on purpose.
+Three layers, deliberately separated:
+
+1. **Guard** — is this a question we should answer? A regex fast-path classifies obvious cases (`in_scope` / `out_of_scope` / `other_appliance` / `injection`) for free; only ambiguous messages pay for a cheap LLM classifier call. Each verdict has its own on-brand deflection.
+2. **Tool-calling agent** — one LLM, one tool registry. The model picks the right tool, the tool runs deterministic SQL or pgvector retrieval, and the result returns as both raw data _and_ a `ui_block` payload the frontend renders mid-stream. Pronouns ("this part") resolve from session memory before any tool fires.
+3. **Validator + stream** — every `PS#` the model wrote must exist in this turn's tool results. Failed validation triggers one targeted retry, then a strip-and-log fallback. The answer streams out as SSE: `tool_start` / `tool_end` (with args + summary) / `ui_block` / `token` / `trace` / `done`.
+
+The deeper architecture — schema, hybrid search, the SQL-vs-vectors split — is
+in the next section.
 
 ## Eval results (the part most chatbots skip)
 
@@ -68,64 +103,66 @@ answered via **RAG over pgvector embeddings in the same database** — which als
 lets semantic hits JOIN prices and stock in one query. Every tool can attach a
 **ui_block**, which the frontend renders as a rich component mid-stream. Before
 the final answer flushes, a **validator** rejects any part number that didn't
-come from a tool result. The tool registry is the extension point: a new
-appliance is new data plus an enum value.
+come from a tool result.
 
 **Compatibility is a database join, never an LLM guess** — and the data layer is
 honest about its limits: a miss is reported as _"not in our verified list"_
 (the scraped cross-reference is partial), never a hard "incompatible".
 
-```mermaid
-flowchart LR
-    subgraph CLIENT["Frontend — React (CRA template, adapted)"]
-        UI["Chat UI<br/>streaming + rich blocks"]
-        BLOCKS["UI Blocks<br/>ProductCard · CompatResult ·<br/>Diagnosis · InstallGuide"]
-        UI --- BLOCKS
-    end
+![Architecture](docs/media/architecture.png)
 
-    subgraph API["Backend — FastAPI"]
-        SSE["POST /chat (SSE)<br/>request_id middleware"]
-        GUARD["Scope Guard<br/>keyword fast-path →<br/>cheap LLM classifier"]
-        AGENT["Agent Loop<br/>single LLM, tool calling,<br/>max 4 iterations"]
-        VAL["Hallucination Validator<br/>every PS# must come<br/>from tool results"]
-        SSE --> GUARD --> AGENT --> VAL --> SSE
-    end
+### Request lifecycle
 
-    subgraph TOOLS["Tool Registry (extension point)"]
-        T1["search_parts"]
-        T2["get_part_details"]
-        T3["check_compatibility"]
-        T4["diagnose_issue"]
-        T5["get_installation_guide"]
-    end
+1. **Scope guard** classifies the message as `in_scope` / `out_of_scope` /
+   `other_appliance` / `injection`. Regex fast-path first; only ambiguous
+   cases pay for an LLM classifier call.
+2. **Agent loop** sends the message + recent history + tool schema to one
+   LLM. Pronouns ("this part") resolve from session memory before any tool
+   fires.
+3. **Tool execution** runs deterministic SQL or pgvector retrieval. Each
+   tool result includes the raw data _and_ a `ui_block` payload for the
+   frontend to render mid-stream.
+4. **Honest draft → validator** — every `PS#` the model wrote must appear in
+   this turn's tool results. Failed validation triggers one targeted retry,
+   then a strip-and-log fallback.
+5. **Stream out** as SSE: `tool_start` / `tool_end` (with args + summary) /
+   `ui_block` / `token` / `trace` / `done`.
 
-    subgraph DATA["Postgres 16 + pgvector (one database)"]
-        SQL[("Relational tables + tsvector<br/>FACTS — deterministic:<br/>parts · prices · stock ·<br/>compatibility · replaces")]
-        VEC[("embeddings table (pgvector)<br/>SEMANTICS — RAG:<br/>repair causes · part docs ·<br/>Q&A + repair stories")]
-    end
+### Two-track data layer (one Postgres)
 
-    subgraph PIPELINE["Offline Pipeline"]
-        SCRAPER["Polite cached scraper<br/>partselect.com slice"]
-        INGEST["ingest.py<br/>--rebuild: normalize + embed<br/>--load-seed: restore dump"]
-        SCRAPER --> INGEST
-    end
+| Track          | Used for                                                         | How                                                                 |
+| -------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------- |
+| **SQL facts**  | prices · stock · compatibility · install difficulty · `replaces` | normalized tables + `tsvector` for keyword search                   |
+| **Vector RAG** | symptoms · descriptions · Q&A snippets                           | pgvector `embeddings` table, joined back to `parts` for price/stock |
 
-    LLM["LLM Provider<br/>OpenAI-compatible,<br/>3 env vars to swap"]
+Hybrid search uses **reciprocal-rank fusion** of `tsvector` and pgvector
+results (with an OR-mode tsquery fallback for verbose natural-language
+queries). Compatibility, prices, and stock are _never_ retrieved by
+similarity — those columns are SQL or nothing.
 
-    UI -- "SSE: tokens · tool status · ui_blocks" --> SSE
-    AGENT <--> LLM
-    AGENT --> TOOLS
-    T1 & T2 & T3 & T5 --> SQL
-    T1 & T4 --> VEC
-    T4 --> SQL
-    INGEST --> SQL
-    INGEST --> VEC
+### Tools (the extension point)
 
-    style SQL fill:#337778,color:#fff
-    style VEC fill:#f3c04c,color:#121212
-    style VAL fill:#f4364c,color:#fff
-    style GUARD fill:#f6f6f4,stroke:#337778
-```
+| Tool                     | Backed by                           | Returns ui_block |
+| ------------------------ | ----------------------------------- | ---------------- |
+| `search_parts`           | hybrid (tsvector + vector)          | `product_list`   |
+| `get_part_details`       | SQL on `parts`                      | `product_card`   |
+| `check_compatibility`    | SQL join `compatibility`            | `compat_result`  |
+| `diagnose_issue`         | vector RAG over repair causes + SQL | `diagnosis`      |
+| `get_installation_guide` | SQL + structured guides             | `install_guide`  |
+
+Adding a tool is one Pydantic schema + one function; adding a new appliance
+is a [TOML edit](backend/app/appliances.toml) + seed URLs (the schema, guard,
+and prompt all rebuild from the TOML at import time).
+
+### Data sourcing
+
+The catalog isn't synthetic — `scraper/` is a polite, cached scraper of
+PartSelect.com that produced **120 real parts** (refrigerator + dishwasher,
+Whirlpool / GE / Frigidaire / LG), with **3.7k compatibility rows** and
+**95 ranked diagnosis causes**. `ingest.py` normalizes the scraped JSON into
+relational tables and embeds the descriptive text with
+`text-embedding-3-small`. A pre-built seed dump ships in the repo so
+`docker compose up` works keyless and offline.
 
 <details>
 <summary>Sequence diagram — the deterministic compatibility path</summary>
@@ -155,24 +192,15 @@ sequenceDiagram
 
 </details>
 
-## Features
+## Engineering features
 
-- **Streaming chat** with tool-status pills ("Checking compatibility…") and a
-  hold-and-validate final flush — tokens appear fast, invented part numbers never do.
-- **Rich blocks** rendered mid-stream: product cards (price, stock, difficulty,
-  rating), compatibility verdicts (✓/⚠/✗ + evidence), ranked
-  diagnosis with expandable causes, install guides (difficulty, time, video,
-  real customer repair stories).
-- **Chat-native navigation**: "Check fits my model" and "Install guide" buttons
-  send templated messages — the conversation _is_ the UI.
-- **Scope guard**: regex fast-path (no extra LLM call for obvious cases), cheap
-  classifier for the rest, graceful on-brand deflections, injection handling
-  (embedded payloads are ignored while the legitimate question is answered).
-- **Hallucination gate**: every `PS#` in a draft must exist in this
-  conversation's tool results — violations are retried, then stripped and
-  logged (`backend/data/hallucination_log.jsonl` stays empty across the eval).
-- **Keyless demo mode**: `MOCK_LLM=1` swaps in a deterministic, tool-faithful
-  scripted client — CI and demos run with zero API keys.
+The "What it does" section is what users see; these are the rails that make it
+safe.
+
+- **Hallucination gate** — every `PS#` in a draft must exist in this conversation's tool results; violations are retried once, then stripped and logged (`backend/data/hallucination_log.jsonl` stays empty across the 40-case eval).
+- **Hold-and-validate final flush** — tokens stream during tool execution, but the final prose is buffered until the validator clears it. Worst-case ~100ms; mechanical zero-hallucination guarantee.
+- **Chat-native navigation** — "Check fits my model" and "Install guide" buttons inside ui*blocks send templated messages back to the agent; the conversation \_is* the UI.
+- **Keyless demo mode** — `MOCK_LLM=1` swaps in a deterministic, tool-faithful scripted client. CI and the docker-compose demo run with zero API keys.
 
 <!-- screenshots: docs/media/block-*.png (see docs/media/README.md) -->
 
@@ -235,8 +263,6 @@ every push; eval is a manual workflow (needs an LLM secret, costs money).
 Built AI-natively: a Claude agent executed the planning docs in
 [`/playbook`](playbook/) end-to-end — scraping, data layer, agent, evals, UI,
 CI — with every deviation from the plan logged in
-[`playbook/DEVIATIONS.md`](playbook/DEVIATIONS.md) and human review on top.
-The playbook is left in the repo deliberately: it's part of the engineering story.
 
 ## Dev guide
 
