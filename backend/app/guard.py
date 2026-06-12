@@ -10,15 +10,19 @@ import logging
 import random
 import re
 
-from backend.app import prompts
+from backend.app import appliances, prompts
 
 logger = logging.getLogger(__name__)
 
+# Appliance scope keywords come from appliances.toml — adding a new appliance
+# (and its keywords) widens the guard automatically.
+_APPLIANCE_KW = "|".join(re.escape(kw) for kw in appliances.ALL_KEYWORDS)
+
 IN_SCOPE_RE = re.compile(
-    r"(fridge|refrigerat|freezer|dishwash|dish rack|dishrack|ice maker|icemaker|"
+    rf"({_APPLIANCE_KW}|"
     r"\bPS\d{5,9}\b|part\b|parts\b|model\s*(number|#)?|compatib|install|"
-    r"order|return|refund|cancel|warranty|filter|spray arm|drain|gasket|seal|"
-    r"shelf|bin|crisper|defrost|compressor|wash|rinse|detergent|leak|noisy|"
+    r"warranty|filter|drain|gasket|seal|"
+    r"shelf|bin|wash|leak|noisy|"
     r"\bW(P|D)?[A-Z]?\d{5,}\b|\b[A-Z]{2,4}\d{3,}[A-Z0-9]*\b)",
     re.I,
 )
@@ -31,10 +35,8 @@ INJECTION_RE = re.compile(
     re.I,
 )
 
-# explicit fridge/dishwasher mention overrides the other-appliance deflection
-CORE_APPLIANCE_RE = re.compile(
-    r"(fridge|refrigerat|freezer|dish ?wash|dishrack|ice ?maker|\bPS\d{5,9}\b)", re.I
-)
+# Explicit core-appliance mention overrides the other-appliance deflection.
+CORE_APPLIANCE_RE = re.compile(rf"({_APPLIANCE_KW}|\bPS\d{{5,9}}\b)", re.I)
 
 OTHER_APPLIANCE_RE = re.compile(
     r"\b(washer|washing machine|dryer|oven|stove|range|microwave|grill|lawn ?mower|"

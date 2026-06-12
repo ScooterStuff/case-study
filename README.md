@@ -42,6 +42,10 @@ An extra button in the composer turns the UX into a real repair companion:
 
 - 📷 **Photo → model number** — snap or upload the appliance sticker; client-side OCR (Tesseract.js, lazy-loaded so the bundle isn't paid up-front) extracts the model number and pre-fills the next message as either a parts search or a compatibility check, depending on the conversation so far.
 
+### "How I know this" (honesty trace)
+
+Every assistant message has a collapsible **trace panel** showing exactly which tools the agent called, the inputs it sent, a one-line summary of each result, and the validator's verdict on every part number mentioned (✓ verified, ✗ stripped, • unknown). Most chatbots ask for trust; this earns it on purpose.
+
 ## Eval results (the part most chatbots skip)
 
 The agent is **measured**, not vibes-checked: a 40-case harness replays
@@ -202,8 +206,10 @@ every push; eval is a manual workflow (needs an LLM secret, costs money).
 
 ## Extensibility
 
-- **New appliance**: add seed URLs + the enum value in `scraper/seeds.py` and
-  `tools.py`; the schema, agent, and UI don't change.
+- **New appliance**: add an entry to [`backend/app/appliances.toml`](backend/app/appliances.toml)
+  (canonical name + keywords), drop seed URLs into `scraper/seeds.py`, and
+  re-ingest. The Pydantic tool schema, scope guard, and system prompt all
+  rebuild from that TOML at import time — no other code changes.
 - **Swap LLM provider**: 3 env vars (`LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`)
   — anything OpenAI-compatible works (tested against the mock + OpenAI shapes).
 - **Scale path**: Postgres+pgvector already production-shaped; move sessions

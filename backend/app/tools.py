@@ -6,11 +6,11 @@ component. Tool *facts* come exclusively from the Phase 2 retrieval layer.
 from __future__ import annotations
 
 import re
-from typing import Literal
 
 from pydantic import BaseModel, Field
 
 from backend.app import retrieval
+from backend.app.appliances import ApplianceType
 
 PS_RE = re.compile(r"PS\d{5,9}")
 
@@ -20,9 +20,7 @@ PS_RE = re.compile(r"PS\d{5,9}")
 
 class SearchPartsIn(BaseModel):
     query: str = Field(description="What the customer is looking for, in their words")
-    appliance_type: Literal["refrigerator", "dishwasher"] | None = Field(
-        None, description="Filter when the appliance is known"
-    )
+    appliance_type: ApplianceType | None = Field(None, description="Filter when the appliance is known")
 
 
 class PartDetailsIn(BaseModel):
@@ -38,7 +36,7 @@ class CompatibilityIn(BaseModel):
 
 class DiagnoseIn(BaseModel):
     symptom_description: str
-    appliance_type: Literal["refrigerator", "dishwasher"]
+    appliance_type: ApplianceType
     brand: str | None = None
 
 
@@ -228,7 +226,7 @@ TOOLS = {
     "get_installation_guide": (
         get_installation_guide,
         InstallGuideIn,
-        "Installation difficulty, time, video and real customer repair stories for a part."
+        "Installation difficulty, time, video and real customer repair stories for a part.",
     ),
 }
 
@@ -255,6 +253,44 @@ def run_tool(name: str, arguments: dict) -> dict:
     fn, model, _ = TOOLS[name]
     args = model(**arguments)
     return fn(**args.model_dump())
+
+
+def result_summary(name: str, data: dict) -> str:
+    """One-line summary of a tool result for the honesty-trace UI.
+
+    Deliberately tiny and deterministic — the panel exists to *prove* the
+    answer is grounded, not to re-render the full payload (which the
+    ui_block already does).
+    """
+    if not isinstance(data, dict):
+        return "ok"
+    if data.get("error"):
+        return f"error: {str(data['error'])[:80]}"
+    if name == "search_parts":
+        rows = data.get("results") or []
+        ps = [r.get("ps_number") for r in rows[:3] if r.get("ps_number")]
+        tail = "…" if len(rows) > 3 else ""
+        return f"{len(rows)} results" + (f" ({', '.join(ps)}{tail})" if ps else "")
+    if name == "get_part_details":
+        if not data.get("found"):
+            return f"no part found for {data.get('identifier', '?')}"
+        return f"{data.get('ps_number')} — {data.get('title', '')[:60]} ({data.get('availability', '?')})"
+    if name == "check_compatibility":
+        evidence = data.get("evidence") or {}
+        verdict = data.get("status", "?")
+        n = evidence.get("verified_model_count_for_part") or evidence.get("parts_verified_for_model")
+        return f"{verdict}" + (f" (evidence: {n})" if n else "")
+    if name == "diagnose_issue":
+        causes = len(data.get("causes") or [])
+        parts = len(data.get("suggested_parts") or [])
+        return f"{causes} causes, {parts} candidate parts"
+    if name == "get_installation_guide":
+        if not data.get("found"):
+            return f"no part found for {data.get('identifier', '?')}"
+        diff = data.get("difficulty") or "?"
+        time_ = data.get("time") or "?"
+        return f"{data.get('ps_number')} — difficulty: {diff}, time: {time_}"
+    return "ok"
 
 
 # ------------------------------------------------- hallucination validator

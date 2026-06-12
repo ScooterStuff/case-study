@@ -120,15 +120,11 @@ class MockLLM:
             if "install help" in prior or "step-by-step" in prior:
                 return "Sure - share the part number and I'll pull the install steps."
             return (
-                "Got it - what would you like to do next? A part number, model "
-                "number, or a symptom all work."
+                "Got it - what would you like to do next? A part number, model number, or a symptom all work."
             )
         if msg in {"refrigerator", "fridge", "dishwasher"}:
             which = "fridge" if msg in {"refrigerator", "fridge"} else "dishwasher"
-            return (
-                f"Got it - a {which}. What's it doing? A symptom, part number, "
-                "or model number all work."
-            )
+            return f"Got it - a {which}. What's it doing? A symptom, part number, or model number all work."
         return (
             "Happy to help! Which appliance is acting up - your refrigerator "
             "or your dishwasher - and what is it doing? A part number or "

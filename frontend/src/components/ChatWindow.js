@@ -42,6 +42,59 @@ function Prose({ text, streaming }) {
   );
 }
 
+// "How I know this": every answer carries the tool calls that produced it,
+// the part numbers we mentioned, and the validator's verdict on each. Most
+// chatbots are a black box — the trace makes the grounding visible.
+function TracePanel({ trace }) {
+  const [open, setOpen] = useState(false);
+  if (!trace) return null;
+  const { calls = [], mentioned_ps = [], verified_ps = [], stripped_ps = [] } = trace;
+  if (!calls.length && !mentioned_ps.length) return null;
+  const verifiedSet = new Set(verified_ps);
+  const strippedSet = new Set(stripped_ps);
+  return (
+    <details className="trace" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
+      <summary className="trace-toggle">
+        How I know this
+        <span className="trace-meta">
+          {calls.length ? `${calls.length} tool call${calls.length === 1 ? "" : "s"}` : "no tools"}
+          {mentioned_ps.length ? ` · ${verified_ps.length}/${mentioned_ps.length} PS# verified` : ""}
+        </span>
+      </summary>
+      <div className="trace-body">
+        {calls.length > 0 && (
+          <ol className="trace-calls">
+            {calls.map((c, i) => (
+              <li key={i}>
+                <code className="trace-name">{c.name}</code>
+                <span className="trace-args">({Object.entries(c.args || {})
+                  .map(([k, v]) => `${k}=${typeof v === "string" ? `"${v}"` : JSON.stringify(v)}`)
+                  .join(", ")})</span>
+                <span className="trace-arrow"> → </span>
+                <span className="trace-summary">{c.summary}</span>
+              </li>
+            ))}
+          </ol>
+        )}
+        {mentioned_ps.length > 0 && (
+          <div className="trace-validator">
+            <span className="trace-label">Validator:</span>
+            {mentioned_ps.map((ps) => {
+              const status = strippedSet.has(ps) ? "stripped" : verifiedSet.has(ps) ? "verified" : "unknown";
+              const mark = status === "verified" ? "✓" : status === "stripped" ? "✗" : "•";
+              return (
+                <span key={ps} className={`trace-ps trace-ps-${status}`} title={status}>
+                  {mark} {ps}
+                </span>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </details>
+  );
+}
+
 export default function ChatWindow() {
   const [sessionId, setSessionId] = useState(getSessionId);
   const [messages, setMessages] = useState([]);   // {role, text, blocks[], pills[], error}
@@ -70,7 +123,7 @@ export default function ChatWindow() {
     setBusy(true);
     setMessages((prev) => [...prev,
       { role: "user", text: message },
-      { role: "assistant", text: "", blocks: [], pills: [] }]);
+      { role: "assistant", text: "", blocks: [], pills: [], trace: null }]);
     const controller = new AbortController();
     abortRef.current = controller;
     try {
@@ -78,7 +131,9 @@ export default function ChatWindow() {
         token: (d) => patchLast((m) => ({ ...m, text: m.text + d.delta })),
         tool_start: (d) => patchLast((m) => ({ ...m, pills: [...m.pills, d] })),
         tool_end: (d) => patchLast((m) => ({ ...m, pills: m.pills.filter((p) => p.name !== d.name) })),
+        tool_error: (d) => patchLast((m) => ({ ...m, pills: m.pills.filter((p) => p.name !== d.name) })),
         ui_block: (d) => patchLast((m) => ({ ...m, blocks: [...m.blocks, d] })),
+        trace: (d) => patchLast((m) => ({ ...m, trace: d })),
         done: () => patchLast((m) => ({ ...m, pills: [] })),
       }, controller.signal);
     } catch (err) {
@@ -147,6 +202,7 @@ export default function ChatWindow() {
             {m.role === "assistant"
               ? <Prose text={m.text} streaming={busy && i === messages.length - 1} />
               : <div className="user-text">{m.text}</div>}
+            {m.role === "assistant" && <TracePanel trace={m.trace} />}
             {m.error && (
               <button className="btn btn-outline small" onClick={() => send(messages[i - 1]?.text)}>
                 Retry

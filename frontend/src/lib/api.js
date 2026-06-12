@@ -1,6 +1,6 @@
 // SSE client for the backend /chat stream (fetch + ReadableStream parsing).
-// Event vocabulary mirrors backend/app/agent.py: token / tool_start / tool_end
-// / ui_block / done.
+// Event vocabulary mirrors backend/app/agent.py: token / tool_start /
+// tool_end (with name+args+summary) / tool_error / ui_block / trace / done.
 const BASE = process.env.REACT_APP_API_BASE || "";
 
 export async function streamChat(sessionId, message, handlers, signal) {

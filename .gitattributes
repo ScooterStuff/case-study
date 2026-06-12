@@ -1,0 +1,4 @@
+# Keep shell scripts LF so they execute correctly inside Linux containers
+# even when cloned on Windows with core.autocrlf=true.
+*.sh text eol=lf
+backend/entrypoint.sh text eol=lf

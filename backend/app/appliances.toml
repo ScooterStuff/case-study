@@ -1,0 +1,31 @@
+# Source of truth for in-scope appliances.
+#
+# Adding a new appliance is intentionally boring:
+#   1) add an entry below (canonical name + scope keywords),
+#   2) drop seed URLs in scraper/seeds.py,
+#   3) re-ingest.
+# The Pydantic tool schema, scope guard, and system prompt all read from here.
+
+[[appliances]]
+name = "refrigerator"
+keywords = [
+    "fridge",
+    "refrigerat",
+    "freezer",
+    "ice maker",
+    "icemaker",
+    "crisper",
+    "defrost",
+    "compressor",
+]
+
+[[appliances]]
+name = "dishwasher"
+keywords = [
+    "dishwash",
+    "dish rack",
+    "dishrack",
+    "spray arm",
+    "rinse",
+    "detergent",
+]

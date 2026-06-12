@@ -22,6 +22,7 @@ from backend.app.tools import (
     PS_RE,
     HallucinationError,
     openai_tool_schemas,
+    result_summary,
     run_tool,
     validate_part_numbers,
 )
@@ -89,6 +90,9 @@ async def chat_stream(session_id: str, user_message: str) -> AsyncIterator[dict]
     ]
     final_text = ""
     tools_used: list[str] = []
+    # Honesty trace: every tool call this turn (name, args, summary) — emitted
+    # at the end so the UI can show "how I know this" alongside the answer.
+    trace_calls: list[dict] = []
 
     for _round in range(MAX_TOOL_ROUNDS + 1):
         buffered: list[str] = []  # final prose is buffered for validation
@@ -153,11 +157,20 @@ async def chat_stream(session_id: str, user_message: str) -> AsyncIterator[dict]
 
         for call, result in zip(tool_calls, results, strict=True):
             state["allowed_ps"] |= set(PS_RE.findall(json.dumps(result["data"], default=str)))
+            summary = result_summary(call["name"], result.get("data") or {})
+            trace_calls.append({"name": call["name"], "args": call["arguments"], "summary": summary})
             if isinstance(result.get("data"), dict) and result["data"].get("error"):
                 # tool failures never 500 the stream - the agent recovers conversationally
-                yield {"event": "tool_error", "data": {"name": call["name"]}}
+                yield {"event": "tool_error", "data": {"name": call["name"], "summary": summary}}
             else:
-                yield {"event": "tool_end", "data": {"name": call["name"]}}
+                yield {
+                    "event": "tool_end",
+                    "data": {
+                        "name": call["name"],
+                        "args": call["arguments"],
+                        "summary": summary,
+                    },
+                }
             if result.get("ui_block"):
                 yield {"event": "ui_block", "data": result["ui_block"]}
             messages.append(
@@ -172,6 +185,7 @@ async def chat_stream(session_id: str, user_message: str) -> AsyncIterator[dict]
     # ---- hallucination gate: buffer-and-release (tool events streamed live,
     # final prose held briefly; tradeoff: tiny perceived delay vs. zero
     # unverified part numbers ever reaching the user).
+    stripped: list[str] = []
     try:
         validate_part_numbers(final_text, state["allowed_ps"])
     except HallucinationError as err:
@@ -189,11 +203,23 @@ async def chat_stream(session_id: str, user_message: str) -> AsyncIterator[dict]
         except HallucinationError as err2:  # strip and caveat - never ship invented numbers
             for n in err2.numbers:
                 final_text = final_text.replace(n, "[part number removed - unverified]")
+            stripped = sorted(err2.numbers)
             final_text += "\n\n(I removed a part number I couldn't verify against our catalog.)"
 
     state["messages"].append({"role": "assistant", "content": final_text})
     for chunk in re.findall(r".{1,40}", final_text, re.S):
         yield {"event": "token", "data": {"delta": chunk}}
+    # Honesty trace: emit BEFORE done so the UI can attach it to this turn.
+    mentioned = sorted({m.upper() for m in PS_RE.findall(final_text)})
+    yield {
+        "event": "trace",
+        "data": {
+            "calls": trace_calls,
+            "mentioned_ps": mentioned,
+            "verified_ps": sorted(state["allowed_ps"] & set(mentioned)),
+            "stripped_ps": stripped,
+        },
+    }
     latency_ms = int((time.monotonic() - t0) * 1000)
     # per-turn ops log: this line is the observability story (ship to OTel in prod)
     logger.info(

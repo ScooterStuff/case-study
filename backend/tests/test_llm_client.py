@@ -119,7 +119,9 @@ def _async_iter(items):
 
 
 def _chunk(content=None, tool_calls=None):
-    return SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content=content, tool_calls=tool_calls))])
+    return SimpleNamespace(
+        choices=[SimpleNamespace(delta=SimpleNamespace(content=content, tool_calls=tool_calls))]
+    )
 
 
 def test_real_llm_streams_tokens_then_tool_call() -> None:
@@ -133,7 +135,8 @@ def test_real_llm_streams_tokens_then_tool_call() -> None:
         real = llm_client.RealLLM()
 
     tc1 = SimpleNamespace(
-        index=0, id="call-1",
+        index=0,
+        id="call-1",
         function=SimpleNamespace(name="get_part_details", arguments='{"part_identifier":'),
     )
     tc2 = SimpleNamespace(index=0, id=None, function=SimpleNamespace(name=None, arguments='"PS1"}'))
